@@ -28,8 +28,12 @@ def makeHexStr(t_val):
 
 # ---------------- End of Functions ----------------------------------------------
 
+# ---------------- CONSTANTS -----------------------------------------------------
 DEFAULT_SRC_PORT = ["9443"]
 DEFAULT_DST_PORT = ["443"]
+
+# ---------------- Major Declarations --------------------------------------------
+srcObjectsList = []
 
 # ----- Input Parsing ------------------------------------------------------------
 
@@ -73,7 +77,9 @@ print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 
 # ---- Parsing Complete ----------------------------------------------------------
 
-# --- Source REST Assembly -------------------------------------------------------
+# ------------------------------------------------
+# REST Assembly for SOURCE LOGIN 
+# ------------------------------------------------
 
 t_srcRESTPreamble       = "/SKLM/rest/v1/"
 t_srcRESTLogin          = t_srcRESTPreamble + "ckms/login"
@@ -99,20 +105,55 @@ t_srcAuthorizationStr   = "SKLMAuth UserAuthId="+t_srcUserAuthID
 print("Authorization Str: ", t_srcAuthorizationStr)
 
 
-## Retrive List of Crypgraphic Objects from REST API  
+# ---------------------------------------------------------------
+# REST Assembly for reading List of Source Cryptographic Objects 
+# ---------------------------------------------------------------
+
 t_srcRESTListObjects        = t_srcRESTPreamble + "objects"
 t_srcHostRESTCmd            = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
 
 print("Verify Object string:", t_srcHostRESTCmd)
+
 t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthorizationStr}
 
-print("Headers: ", t_srcHeaders)
-
+# Note that REST Command does not require a body object in this GET REST Command
 r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
 print("Status Code:", r.status_code)
 
-print("Object Result:", r.json()['managedObject'])
+srcObjectList       = r.json()['managedObject']
+srcObjectListCnt    = len(srcObjectList)
 
+print("\nNumber of Src Objects: ", srcObjectListCnt)
+
+srcObjID = srcObjectList[0]['uuid']
+print("\nObject Result:", srcObjID)
+
+print("Object Result:", srcObjectList[0].keys())
+
+print("\nCount of object elements: ", len(srcObjectList[0]))
+print("Count of object element keys: ", srcObjectList[0].keys())
+
+# ---------------------------------------------------------------
+# REST Assembly for reading specific Object Data 
+# ---------------------------------------------------------------
+
+t_srcRESTListObjects        = t_srcRESTPreamble + "objects"
+t_srcHostRESTCmd            = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, srcObjID)
+
+print("\nVerify Object string:", t_srcHostRESTCmd)
+
+t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthorizationStr}
+
+# Note that REST Command does not require a body object in this GET REST Command
+r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+print("Status Code:", r.status_code)
+
+srcObjectData       = r.json()['managedObject']
+srcObjectDataCnt    = len(srcObjectData)
+
+print("\nNumber of Src Object Data: ", srcObjectDataCnt)
+print("\nObject Result:", srcObjectData['uuid'])
+print("Object Result:", srcObjectData.keys())
+
+# Todo - Iterate over key objects (0-objectCount) and then GET all object material, including KEY_BLOCK.  Save in updated dictionary.
 print("\n --- COMPLETE --- ")
-
-
