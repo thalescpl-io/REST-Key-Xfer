@@ -2,8 +2,7 @@
 #
 # 	Name: k-rest.py
 # 	Author: Rick R
-# 	Purpose:  Python-based REST Client Data Exchange
-#
+# 	Purpose:  Python-based REST Key Transfer
 #   Usage: py k-rest.py -srcHost <hostname or IP> -srcUser <username> -srcPass <password> 
 #                   -dstHost <hostname or IP> -dstUser <username> -dstPass <password> 
 #                   
@@ -76,29 +75,43 @@ print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 
 # --- Source REST Assembly -------------------------------------------------------
 
-t_srcRESTPreamble = "/SKLM/rest/v1/ckms"
-t_srcRESTLogin = t_srcRESTPreamble + "/login"
-t_srcHostRESTLogin = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTLogin)
-print("login string:", t_srcHostRESTLogin)
+t_srcRESTPreamble       = "/SKLM/rest/v1/"
+t_srcRESTLogin          = t_srcRESTPreamble + "ckms/login"
+t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTLogin)
+
+print("Verify login string:", t_srcHostRESTCmd)
 
 t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json"}
 t_srcBody = {"userid":t_srcUser, "password":t_srcPass}
 
-print("JSON dumps: ", json.dumps(t_srcBody))
-
 # Suppress SSL Verification Warnings
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
-r = requests.post(t_srcHostRESTLogin, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
+# Note that GKLM does not required Basic Auth to retrieve information.  Instead, the body of the call contains the userID and password.
+r = requests.post(t_srcHostRESTCmd, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
 
-# print("Result: ", dir(r))
 print("Status Code:", r.status_code)
-# print("Headers:", r.headers)
-print("JSON:", r.text)
+
+# Extract the UserAuthId from the value of the key-value pair of the JSON reponse.
+t_srcUserAuthID = r.json()['UserAuthId']
+print("\nUserAuthId:", t_srcUserAuthID)
+t_srcAuthorizationStr   = "SKLMAuth UserAuthId="+t_srcUserAuthID
+print("Authorization Str: ", t_srcAuthorizationStr)
 
 
-r.json()
+## Retrive List of Crypgraphic Objects from REST API  
+t_srcRESTListObjects        = t_srcRESTPreamble + "objects"
+t_srcHostRESTCmd            = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
 
+print("Verify Object string:", t_srcHostRESTCmd)
+t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthorizationStr}
+
+print("Headers: ", t_srcHeaders)
+
+r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+print("Status Code:", r.status_code)
+
+print("Object Result:", r.json()['managedObject'])
 
 print("\n --- COMPLETE --- ")
 
