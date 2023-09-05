@@ -275,6 +275,9 @@ t_dstRESTKeyExportFlag  = "export"
 
 for obj in range(dstObjectListCnt):
     dstObjID = dstObjectList[obj]['id']
+    
+    # If the object is not exportable, then an error code will be returned.  So, check for exportability prior to
+    # attempting to export the key material from the DESTINATION.
     if dstObjectList[obj]['unexportable']==True:
         tmpStr ="\nUNEXPORTABLE! ObjID: %s" %dstObjID
         print(tmpStr)
@@ -302,5 +305,7 @@ for obj in range(dstObjectListCnt):
     print("Object Result:", dstObjectData)
 
 print("\nTotal Dst Objects: ", dstObjectListCnt)
+
+# Next STEPS:  Map Object Dictionary keys between Source an Destination and they copy over.
 
 print("\n ---- COMPLETE ---- ")
