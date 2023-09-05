@@ -29,10 +29,11 @@ def makeHexStr(t_val):
 # ---------------- End of Functions ----------------------------------------------
 
 # ---------------- CONSTANTS -----------------------------------------------------
-DEFAULT_SRC_PORT = ["9443"]
-DEFAULT_DST_PORT = ["443"]
+DEFAULT_SRC_PORT    = ["9443"]
+DEFAULT_DST_PORT    = ["443"]
 
-STATUS_CODE_OK  =   200
+STATUS_CODE_OK      = 200
+HTTPS_PORT_VALUE    = 443
 
 # ---------------- Major Declarations --------------------------------------------
 srcObjectsList = []
@@ -90,6 +91,11 @@ print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 t_srcRESTPreamble       = "/SKLM/rest/v1/"
 t_srcRESTLogin          = t_srcRESTPreamble + "ckms/login"
 t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTLogin)
+if t_srcPort == HTTPS_PORT_VALUE:
+    t_srcHostRESTCmd        = "https://%s%s" %(t_srcHost, t_srcRESTLogin)
+else:
+    t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTLogin)    
+
 t_srcHeaders            = {"Content-Type":"application/json", "Accept":"application/json"}
 t_srcBody               = {"userid":t_srcUser, "password":t_srcPass}
 
@@ -155,6 +161,53 @@ for obj in range(srcObjectListCnt):
     print("Number of Src Object Data Elements: ", srcObjectDataCnt)
 #    print("Object Result:", srcObjectData.keys())
 #    print("Object Result:", srcObjectData.values())
+    print("Object Result:", srcObjectData)
 
 print("\nTotal Objects: ", srcObjectListCnt)
-print("\n --- COMPLETE --- ")
+print("\n\n --- SOURCE REST COMPLETE --- \n\n")
+
+# -----------------------------------------------------------------------------
+# REST Assembly for DESTINATION LOGIN 
+# 
+# The objective of this section is to provide the username and password parameters
+# to the REST interface of the dst host in return for a BEARER TOKEN that is 
+# used for authentication of other commands
+# -----------------------------------------------------------------------------
+
+t_dstRESTPreamble       = "/api/v1/"
+t_dstRESTTokens          = t_dstRESTPreamble + "auth/tokens/"
+
+# If the port is the default value of HTTPS (443, specifically), there is no need to call it out in the REST API call
+if t_dstPort == HTTPS_PORT_VALUE:
+    t_dstHostRESTCmd        = "https://%s%s" %(t_dstHost, t_dstRESTTokens)
+else:
+    t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTTokens)    
+
+t_dstHeaders            = {"Content-Type":"application/json"}
+
+print("\n d_dstHostRESTCmd: ", t_dstHostRESTCmd)
+#t_dstBody               = {"grant_type":"password", "username":t_dstUser, "connection":"", "password":t_dstPass, "domain":"", "auth_domain":"", "refresh_token_revoke_unused_in":60, "client_id":"837c840d-75dd-4b4f-a318-79cb16ca248d"}
+t_dstBody               = {"name":t_dstUser, "password":t_dstPass}
+
+# Suppress SSL Verification Warnings
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
+# Note that CM does not required Basic Auth to retrieve information.  
+# Instead, the body of the call contains the username and password.
+r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_dstBody), headers=t_dstHeaders, verify=False)
+
+if(r.status_code != STATUS_CODE_OK):
+    print("Status Code:", r.status_code)
+    print("All of response: ", r.reason)
+    exit()
+
+# Extract the Bearer Token from the value of the key-value pair of the JSON reponse which is identified by the 'jwt' key.
+t_dstUserBearerToken            = r.json()['jwt']
+t_dstUserBearerTokenDuration    = r.json()['duration']
+t_dstAuthorizationStr           = "Bearer "+t_dstUserBearerToken
+
+print("\n Dst Authorization Duration: ", t_dstUserBearerTokenDuration)
+print("\n Dst Authorization String: ", t_dstAuthorizationStr)
+
+
+print("n ---- COMPLETE ---- ")
