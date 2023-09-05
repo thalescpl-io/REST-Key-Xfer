@@ -32,6 +32,8 @@ def makeHexStr(t_val):
 DEFAULT_SRC_PORT = ["9443"]
 DEFAULT_DST_PORT = ["443"]
 
+STATUS_CODE_OK  =   200
+
 # ---------------- Major Declarations --------------------------------------------
 srcObjectsList = []
 
@@ -98,7 +100,8 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 # Instead, the body of the call contains the userID and password.
 r = requests.post(t_srcHostRESTCmd, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
 
-print("Status Code:", r.status_code)
+if(r.status_code != STATUS_CODE_OK):
+    print("Status Code:", r.status_code)
 
 # Extract the UserAuthId from the value of the key-value pair of the JSON reponse.
 t_srcUserAuthID = r.json()['UserAuthId']
@@ -117,7 +120,8 @@ t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", 
 
 # Note that REST Command does not require a body object in this GET REST Command
 r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
-print("Status Code:", r.status_code)
+if(r.status_code != STATUS_CODE_OK):
+    print("Status Code:", r.status_code)
 
 srcObjectList       = r.json()['managedObject']
 srcObjectListCnt    = len(srcObjectList)
@@ -141,13 +145,14 @@ for obj in range(srcObjectListCnt):
 
     # Note that REST Command does not require a body object in this GET REST Command
     r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
-    print("Status Code:", r.status_code)
+    if(r.status_code != STATUS_CODE_OK):
+        print("Status Code:", r.status_code)
 
     srcObjectData       = r.json()['managedObject']
     srcObjectDataCnt    = len(srcObjectData)
 
-    print("\nObject Result:", srcObjectData['uuid'])
-    print("\nNumber of Src Object Data Elements: ", srcObjectDataCnt)
+    print("\nObject UUID:", srcObjectData['uuid'])
+    print("Number of Src Object Data Elements: ", srcObjectDataCnt)
 #    print("Object Result:", srcObjectData.keys())
 #    print("Object Result:", srcObjectData.values())
 
