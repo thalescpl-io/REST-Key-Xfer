@@ -77,43 +77,42 @@ print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 
 # ---- Parsing Complete ----------------------------------------------------------
 
-# ------------------------------------------------
+# -----------------------------------------------------------------------------
 # REST Assembly for SOURCE LOGIN 
-# ------------------------------------------------
+# 
+# The objective of this section is to provide the username and password parameters
+# to the REST interface of the src host in return for a AUTHORIZATION STRING (token)
+# that is used for authentication of other commands
+# -----------------------------------------------------------------------------
 
 t_srcRESTPreamble       = "/SKLM/rest/v1/"
 t_srcRESTLogin          = t_srcRESTPreamble + "ckms/login"
 t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTLogin)
-
-print("Verify login string:", t_srcHostRESTCmd)
-
-t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json"}
-t_srcBody = {"userid":t_srcUser, "password":t_srcPass}
+t_srcHeaders            = {"Content-Type":"application/json", "Accept":"application/json"}
+t_srcBody               = {"userid":t_srcUser, "password":t_srcPass}
 
 # Suppress SSL Verification Warnings
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
-# Note that GKLM does not required Basic Auth to retrieve information.  Instead, the body of the call contains the userID and password.
+# Note that GKLM does not required Basic Auth to retrieve information.  
+# Instead, the body of the call contains the userID and password.
 r = requests.post(t_srcHostRESTCmd, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
 
 print("Status Code:", r.status_code)
 
 # Extract the UserAuthId from the value of the key-value pair of the JSON reponse.
 t_srcUserAuthID = r.json()['UserAuthId']
-print("\nUserAuthId:", t_srcUserAuthID)
-t_srcAuthorizationStr   = "SKLMAuth UserAuthId="+t_srcUserAuthID
-print("Authorization Str: ", t_srcAuthorizationStr)
+t_srcAuthorizationStr   = "SKLMAuth UserAuthId="+t_srcUserAuthID 
 
-
-# ---------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # REST Assembly for reading List of Source Cryptographic Objects 
-# ---------------------------------------------------------------
+#
+# The objective of this section is to querry a list of cryptographic
+# objects current stored or managed by the src host.
+# -----------------------------------------------------------------------------
 
 t_srcRESTListObjects        = t_srcRESTPreamble + "objects"
 t_srcHostRESTCmd            = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
-
-print("Verify Object string:", t_srcHostRESTCmd)
-
 t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthorizationStr}
 
 # Note that REST Command does not require a body object in this GET REST Command
@@ -125,35 +124,32 @@ srcObjectListCnt    = len(srcObjectList)
 
 print("\nNumber of Src Objects: ", srcObjectListCnt)
 
-srcObjID = srcObjectList[0]['uuid']
-print("\nObject Result:", srcObjID)
-
-print("Object Result:", srcObjectList[0].keys())
-
-print("\nCount of object elements: ", len(srcObjectList[0]))
-print("Count of object element keys: ", srcObjectList[0].keys())
-
-# ---------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # REST Assembly for reading specific Object Data 
-# ---------------------------------------------------------------
+#
+# Using the LISTOBJECTs API above, the src host delivers all but the actual
+# key block of object.  This section returns and collects the key block for 
+# each object.
+# -----------------------------------------------------------------------------
 
 t_srcRESTListObjects        = t_srcRESTPreamble + "objects"
-t_srcHostRESTCmd            = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, srcObjID)
 
-print("\nVerify Object string:", t_srcHostRESTCmd)
+for obj in range(srcObjectListCnt):
+    srcObjID = srcObjectList[obj]['uuid']
+    t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, srcObjID)
+    t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthorizationStr}
 
-t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthorizationStr}
+    # Note that REST Command does not require a body object in this GET REST Command
+    r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+    print("Status Code:", r.status_code)
 
-# Note that REST Command does not require a body object in this GET REST Command
-r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
-print("Status Code:", r.status_code)
+    srcObjectData       = r.json()['managedObject']
+    srcObjectDataCnt    = len(srcObjectData)
 
-srcObjectData       = r.json()['managedObject']
-srcObjectDataCnt    = len(srcObjectData)
+    print("\nObject Result:", srcObjectData['uuid'])
+    print("\nNumber of Src Object Data Elements: ", srcObjectDataCnt)
+#    print("Object Result:", srcObjectData.keys())
+#    print("Object Result:", srcObjectData.values())
 
-print("\nNumber of Src Object Data: ", srcObjectDataCnt)
-print("\nObject Result:", srcObjectData['uuid'])
-print("Object Result:", srcObjectData.keys())
-
-# Todo - Iterate over key objects (0-objectCount) and then GET all object material, including KEY_BLOCK.  Save in updated dictionary.
+print("\nTotal Objects: ", srcObjectListCnt)
 print("\n --- COMPLETE --- ")
