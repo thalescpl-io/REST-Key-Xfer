@@ -156,9 +156,9 @@ for obj in range(srcObjectListCnt):
 
     print("\nObject UUID:", srcObjectData['uuid'])
     print("Number of Src Object Data Elements: ", srcObjectDataCnt)
-    print("Object Result:", srcObjectData.keys())
+#    print("Object Result:", srcObjectData.keys())
 #    print("Object Result:", srcObjectData.values())
-#    print("Object Result:", srcObjectData)
+    print("Object Result:", srcObjectData)
 
 print("\nTotal Src Objects: ", srcObjectListCnt)
 print("\n\n --- SOURCE REST COMPLETE --- \n\n")
@@ -227,7 +227,7 @@ print("\nCount of Dst Objects: ", dstObjectListCnt)
 print("\n         Dst Objects: ", dstObjectList[0].keys())
 
 # -----------------------------------------------------------------------------
-# REST Assembly for reading specific Object Data from DESTINATION HOST
+# REST Assembly for READING specific Object Data from DESTINATION HOST
 #
 # Using the VAULT/KEYS2 API above, the dst host delivers all but the actual
 # key block of object.  This section returns and collects the key block for 
@@ -245,16 +245,62 @@ for obj in range(dstObjectListCnt):
     r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
         print("Status Code:", r.status_code)
+        print("     Reason:", r.reason)
+        print("Obj ID:", dstObjID)
+        print("CMD: ",t_dstHostRESTCmd)
+        continue
+
+    dstObjectData       = r.json()
+    dstObjectDataCnt    = len(dstObjectData)
+
+    print("\nObject UUID:", dstObjectData['id'])
+    print("Exportable?:", dstObjectData['unexportable'])
+    print("Number of Dst Object Data Elements: ", dstObjectDataCnt)
+#    print("Object Result:", dstObjectData.keys())
+#    print("Object Result:", dstObjectData.values())
+    print("Object Result:", dstObjectData)
+
+print("\nTotal Dst Objects: ", dstObjectListCnt)
+
+# -----------------------------------------------------------------------------
+# REST Assembly for EXPORTING specific Object Data from DESTINATION HOST
+#
+# Using the VAULT/KEYS2 API above, the dst host delivers all but the actual
+# key block of object.  This section returns and collects the key block for 
+# each object.
+# -----------------------------------------------------------------------------
+
+t_dstRESTKeyList        = t_dstRESTPreamble + "vault/keys2"
+t_dstRESTKeyExportFlag  = "export"
+
+for obj in range(dstObjectListCnt):
+    dstObjID = dstObjectList[obj]['id']
+    if dstObjectList[obj]['unexportable']==True:
+        tmpStr ="\nUNEXPORTABLE! ObjID: %s" %dstObjID
+        print(tmpStr)
+        continue
+        
+    t_dstHostRESTCmd = "https://%s:%s%s/%s/%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList, dstObjID, t_dstRESTKeyExportFlag)
+    t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthorizationStr}
+
+    # Note that REST Command does not require a body object in this GET REST Command
+    r = requests.post(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        print("Status Code:", r.status_code)
+        print("     Reason:", r.reason)
+        print("Obj ID:", dstObjID)
+        print("CMD: ",t_dstHostRESTCmd)
+        continue
 
     dstObjectData       = r.json()
     dstObjectDataCnt    = len(dstObjectData)
 
     print("\nObject UUID:", dstObjectData['id'])
     print("Number of Dst Object Data Elements: ", dstObjectDataCnt)
-    print("Object Result:", dstObjectData.keys())
+#    print("Object Result:", dstObjectData.keys())
 #    print("Object Result:", dstObjectData.values())
-#    print("Object Result:", dstObjectData)
+    print("Object Result:", dstObjectData)
 
 print("\nTotal Dst Objects: ", dstObjectListCnt)
 
-print("n ---- COMPLETE ---- ")
+print("\n ---- COMPLETE ---- ")
