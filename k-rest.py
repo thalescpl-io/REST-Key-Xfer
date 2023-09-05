@@ -89,12 +89,9 @@ print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 # -----------------------------------------------------------------------------
 
 t_srcRESTPreamble       = "/SKLM/rest/v1/"
+
 t_srcRESTLogin          = t_srcRESTPreamble + "ckms/login"
 t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTLogin)
-if t_srcPort == HTTPS_PORT_VALUE:
-    t_srcHostRESTCmd        = "https://%s%s" %(t_srcHost, t_srcRESTLogin)
-else:
-    t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTLogin)    
 
 t_srcHeaders            = {"Content-Type":"application/json", "Accept":"application/json"}
 t_srcBody               = {"userid":t_srcUser, "password":t_srcPass}
@@ -110,7 +107,7 @@ if(r.status_code != STATUS_CODE_OK):
     print("Status Code:", r.status_code)
 
 # Extract the UserAuthId from the value of the key-value pair of the JSON reponse.
-t_srcUserAuthID = r.json()['UserAuthId']
+t_srcUserAuthID         = r.json()['UserAuthId']
 t_srcAuthorizationStr   = "SKLMAuth UserAuthId="+t_srcUserAuthID 
 
 # -----------------------------------------------------------------------------
@@ -120,17 +117,17 @@ t_srcAuthorizationStr   = "SKLMAuth UserAuthId="+t_srcUserAuthID
 # objects current stored or managed by the src host.
 # -----------------------------------------------------------------------------
 
-t_srcRESTListObjects        = t_srcRESTPreamble + "objects"
-t_srcHostRESTCmd            = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
-t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthorizationStr}
+t_srcRESTListObjects    = t_srcRESTPreamble + "objects"
+t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
+t_srcHeaders            = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthorizationStr}
 
-# Note that REST Command does not require a body object in this GET REST Command
+# Note that this REST Command does not require a body object in this GET REST Command
 r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
 if(r.status_code != STATUS_CODE_OK):
     print("Status Code:", r.status_code)
 
-srcObjectList       = r.json()['managedObject']
-srcObjectListCnt    = len(srcObjectList)
+srcObjectList           = r.json()['managedObject']
+srcObjectListCnt        = len(srcObjectList)
 
 print("\nNumber of Src Objects: ", srcObjectListCnt)
 
@@ -159,35 +156,31 @@ for obj in range(srcObjectListCnt):
 
     print("\nObject UUID:", srcObjectData['uuid'])
     print("Number of Src Object Data Elements: ", srcObjectDataCnt)
-#    print("Object Result:", srcObjectData.keys())
+    print("Object Result:", srcObjectData.keys())
 #    print("Object Result:", srcObjectData.values())
-    print("Object Result:", srcObjectData)
+#    print("Object Result:", srcObjectData)
 
-print("\nTotal Objects: ", srcObjectListCnt)
+print("\nTotal Src Objects: ", srcObjectListCnt)
 print("\n\n --- SOURCE REST COMPLETE --- \n\n")
 
 # -----------------------------------------------------------------------------
-# REST Assembly for DESTINATION LOGIN 
+# REST Assembly for DESTINATION HOST LOGIN 
 # 
 # The objective of this section is to provide the username and password parameters
 # to the REST interface of the dst host in return for a BEARER TOKEN that is 
-# used for authentication of other commands
+# used for authentication of other commands.
 # -----------------------------------------------------------------------------
 
 t_dstRESTPreamble       = "/api/v1/"
-t_dstRESTTokens          = t_dstRESTPreamble + "auth/tokens/"
 
-# If the port is the default value of HTTPS (443, specifically), there is no need to call it out in the REST API call
-if t_dstPort == HTTPS_PORT_VALUE:
-    t_dstHostRESTCmd        = "https://%s%s" %(t_dstHost, t_dstRESTTokens)
-else:
-    t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTTokens)    
+t_dstRESTTokens         = t_dstRESTPreamble + "auth/tokens/"
+t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTTokens)    
 
 t_dstHeaders            = {"Content-Type":"application/json"}
-
-print("\n d_dstHostRESTCmd: ", t_dstHostRESTCmd)
-#t_dstBody               = {"grant_type":"password", "username":t_dstUser, "connection":"", "password":t_dstPass, "domain":"", "auth_domain":"", "refresh_token_revoke_unused_in":60, "client_id":"837c840d-75dd-4b4f-a318-79cb16ca248d"}
 t_dstBody               = {"name":t_dstUser, "password":t_dstPass}
+
+# DEBUG
+# print("\n d_dstHostRESTCmd: ", t_dstHostRESTCmd)
 
 # Suppress SSL Verification Warnings
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
@@ -206,8 +199,62 @@ t_dstUserBearerToken            = r.json()['jwt']
 t_dstUserBearerTokenDuration    = r.json()['duration']
 t_dstAuthorizationStr           = "Bearer "+t_dstUserBearerToken
 
-print("\n Dst Authorization Duration: ", t_dstUserBearerTokenDuration)
-print("\n Dst Authorization String: ", t_dstAuthorizationStr)
+# print("\n Dst Authorization Duration: ", t_dstUserBearerTokenDuration)
+# print("\n Dst Authorization String: ", t_dstAuthorizationStr)
 
+# -----------------------------------------------------------------------------
+# REST Assembly for DESTINATION OBJECT READING KEYS
+# 
+# The objective of this section is to use the Dst Authorization / Bearer Token
+# to query the dst hosts REST interface about keys.
+# -----------------------------------------------------------------------------
+t_dstRESTKeyList        = t_dstRESTPreamble + "vault/keys2"
+t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList)   
+t_dstHeaders            = {"Content-Type":"application/json", "Accept":"application/json", "Authorization": t_dstAuthorizationStr}
+
+# Note that this REST Command does not require a body object in this GET REST Command
+r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
+
+if(r.status_code != STATUS_CODE_OK):
+    print("Status Code:", r.status_code)
+    print("All of response: ", r.reason)
+    exit()
+    
+dstObjectList           = r.json()['resources']
+dstObjectListCnt        = len(dstObjectList)
+
+print("\nCount of Dst Objects: ", dstObjectListCnt)
+print("\n         Dst Objects: ", dstObjectList[0].keys())
+
+# -----------------------------------------------------------------------------
+# REST Assembly for reading specific Object Data from DESTINATION HOST
+#
+# Using the VAULT/KEYS2 API above, the dst host delivers all but the actual
+# key block of object.  This section returns and collects the key block for 
+# each object.
+# -----------------------------------------------------------------------------
+
+t_dstRESTKeyList        = t_dstRESTPreamble + "vault/keys2"
+
+for obj in range(dstObjectListCnt):
+    dstObjID = dstObjectList[obj]['id']
+    t_dstHostRESTCmd = "https://%s:%s%s/%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList, dstObjID)
+    t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthorizationStr}
+
+    # Note that REST Command does not require a body object in this GET REST Command
+    r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        print("Status Code:", r.status_code)
+
+    dstObjectData       = r.json()
+    dstObjectDataCnt    = len(dstObjectData)
+
+    print("\nObject UUID:", dstObjectData['id'])
+    print("Number of Dst Object Data Elements: ", dstObjectDataCnt)
+    print("Object Result:", dstObjectData.keys())
+#    print("Object Result:", dstObjectData.values())
+#    print("Object Result:", dstObjectData)
+
+print("\nTotal Dst Objects: ", dstObjectListCnt)
 
 print("n ---- COMPLETE ---- ")
