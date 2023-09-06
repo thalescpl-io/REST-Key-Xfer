@@ -41,7 +41,7 @@ def makeHexStr(t_val):
     return t_hexStr
 
 # -----------------------------------------------------------------------------
-# REST Assembly for SOURCE LOGIN 
+# REST Assembly for Src LOGIN 
 # 
 # The objective of this section is to provide the username and password parameters
 # to the REST interface of the src host in return for a AUTHORIZATION STRING (token)
@@ -74,7 +74,7 @@ def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
     return t_srcAuthStr
 
 # -----------------------------------------------------------------------------
-# REST Assembly for reading List of Source Cryptographic Objects 
+# REST Assembly for reading List of Src Cryptographic Objects 
 #
 # The objective of this section is to querry a list of cryptographic
 # objects current stored or managed by the src host.
@@ -103,12 +103,14 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 # key block of object.  This section returns and collects the key block for 
 # each object.
 # -----------------------------------------------------------------------------
-def getSourceObjData(t_srcHost, t_srcPort, t_srcAuthStr)
+def getSrcObjData(t_srcHost, t_srcPort, t_SrcObjList, t_srcAuthStr)
     t_srcRESTListObjects        = SRC_REST_PREAMBLE + "objects"
 
+    srcObjListCnt = len(t_srcObjList)
+    
     for obj in range(srcObjListCnt):
-        srcObjID = srcObjList[obj]['uuid']
-        t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, srcObjID)
+        t_srcObjID = t_srcObjList[obj]['uuid']
+        t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, t_srcObjID)
         t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
 
         # Note that REST Command does not require a body object in this GET REST Command
@@ -184,7 +186,7 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr)
         print("All of response: ", r.reason)
         exit()
 
-    t_dstObjList           = r.json()['resources']
+    t_dstObjList           = r.json()['reSrcs']
     t_dstObjListCnt        = len(t_dstObjList)
 
     # print("\nCount of Dst Objects: ", t_dstObjListCnt)
@@ -288,7 +290,7 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr)
 # automatically
 parser = argparse.ArgumentParser(prog="k-rest.py", description="REST Client Data Exchange")
 
-# Source Information
+# Src Information
 parser.add_argument("-srcHost", nargs=1, action="store", dest="srcHost", required=True)
 parser.add_argument(
     "-srcPort", nargs=1, action="store", dest="srcPort", default=DEFAULT_SRC_PORT
@@ -318,7 +320,7 @@ t_dstUser = str(" ".join(args.dstUser))
 t_dstPass = str(" ".join(args.dstPass))
 
 print("\n ---- INPUT STATS: ----")
-print("Source: ", srcHost, srcPort, srcUser)
+print("Src: ", srcHost, srcPort, srcUser)
 print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 
 # ---- Parsing Complete ----------------------------------------------------------
@@ -332,12 +334,13 @@ print("\n SAS:", srcAuthStr)
 srcObjList, srcObjListCnt = getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr)
 print("\nNumber of Src Objects: ", srcObjListCnt)
 
+srcObjData = getSrcOjbData(t_srcHost, t_srcPort, srcObjList, t_srcAuthStr)
 
 print("\nTotal Src Objects: ", srcObjListCnt)
-print("\n\n --- SOURCE REST COMPLETE --- \n\n")
+print("\n\n --- Src REST COMPLETE --- \n\n")
 exit()
 
 
-# Next STEPS:  Map Object Dictionary keys between Source an Destination and they copy over.
+# Next STEPS:  Map Object Dictionary keys between Src an Destination and they copy over.
 
 print("\n ---- COMPLETE ---- ")
