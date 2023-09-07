@@ -325,10 +325,10 @@ print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
 print("\n SAS:", srcAuthStr)
 
-srcObjList,     = getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr)
+srcObjList,     = getSrcObjList(srcHost, srcPort, srcAuthStr)
 print("\nNumber of Src Objects: ", len(srcObjList))
 
-srcObjData      = getSrcOjbData(t_srcHost, t_srcPort, srcObjList, t_srcAuthStr)
+srcObjData      = getSrcOjbData(srcHost, srcPort, srcObjList, srcAuthStr)
 
 
 print("\n\n --- Src REST COMPLETE --- \n\n")
