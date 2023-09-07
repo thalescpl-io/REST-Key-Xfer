@@ -104,7 +104,7 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 # key block of object.  This section returns and collects the key block for 
 # each object.
 # -----------------------------------------------------------------------------
-def getSrcObjData(t_srcHost, t_srcPort, t_SrcObjList, t_srcAuthStr):
+def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
     t_srcRESTListObjects        = SRC_REST_PREAMBLE + "objects"
 
     srcObjListCnt = len(t_srcObjList)
@@ -314,8 +314,8 @@ t_dstUser = str(" ".join(args.dstUser))
 t_dstPass = str(" ".join(args.dstPass))
 
 print("\n ---- INPUT STATS: ----")
-print("Src: ", srcHost, srcPort, srcUser)
-print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
+print(" Src: ", srcHost, srcPort, srcUser)
+print("Dest: ", t_dstHost, t_dstPort, t_dstUser)
 
 # ---- Parsing Complete ----------------------------------------------------------
 
@@ -323,13 +323,13 @@ print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 # ---- MAIN MAIN MAIN ------------------------------------------------------------
 # --------------------------------------------------------------------------------
 srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
-print("\n SAS:", srcAuthStr)
+print("\nSAS:", srcAuthStr)
 
-srcObjList,     = getSrcObjList(srcHost, srcPort, srcAuthStr)
-print("\nNumber of Src Objects: ", len(srcObjList))
+srcObjList      = getSrcObjList(srcHost, srcPort, srcAuthStr)
+print("Number of Src Objects: ", len(srcObjList))
 
-srcObjData      = getSrcOjbData(srcHost, srcPort, srcObjList, srcAuthStr)
-
+srcObjData      = getSrcObjData(srcHost, srcPort, srcObjList, srcAuthStr)
+print("Number of Src Data elements:", len(srcObjData))
 
 print("\n\n --- Src REST COMPLETE --- \n\n")
 exit()
