@@ -105,11 +105,13 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 # each object.
 # -----------------------------------------------------------------------------
 def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
-    t_srcRESTListObjects        = SRC_REST_PREAMBLE + "objects"
 
-    srcObjListCnt = len(t_srcObjList)
-    
-    for obj in range(srcObjListCnt):
+    t_srcRESTListObjects        = SRC_REST_PREAMBLE + "objects"
+    t_ListLen = len(t_srcObjList)
+
+    t_srcObjData    = [] # created list to be returned later
+
+    for obj in range(t_ListLen):
         t_srcObjID = t_srcObjList[obj]['uuid']
         t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, t_srcObjID)
         t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
@@ -120,13 +122,12 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
             print("getSrcObjData Status Code:", r.status_code)
             exit()
 
-        t_srcObjData       = r.json()['managedObject']
+        t_data   = r.json()['managedObject']
+        t_srcObjData.append(t_data)     # Add data to list
 
-        print("\nObject UUID:", t_srcObjData['uuid'])
-    #    print("Object Result:", t_srcObjData.keys())
-    #    print("Object Result:", t_srcObjData.values())
+        print("Object ", obj, " UUID:", t_srcObjData[obj]['uuid'])
         
-        return t_srcObjData
+    return t_srcObjData
 
 # -----------------------------------------------------------------------------
 # REST Assembly for DESTINATION HOST LOGIN 
@@ -329,7 +330,8 @@ srcObjList      = getSrcObjList(srcHost, srcPort, srcAuthStr)
 print("Number of Src Objects: ", len(srcObjList))
 
 srcObjData      = getSrcObjData(srcHost, srcPort, srcObjList, srcAuthStr)
-print("Number of Src Data elements:", len(srcObjData))
+print("Number of Src Data Objects:", len(srcObjData))
+print("Src Data Object 0:", srcObjData[0])
 
 print("\n\n --- Src REST COMPLETE --- \n\n")
 exit()
