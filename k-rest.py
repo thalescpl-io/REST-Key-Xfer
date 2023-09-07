@@ -104,7 +104,7 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 # key block of object.  This section returns and collects the key block for 
 # each object.
 # -----------------------------------------------------------------------------
-def getSrcObjData(t_srcHost, t_srcPort, t_SrcObjList, t_srcAuthStr)
+def getSrcObjData(t_srcHost, t_srcPort, t_SrcObjList, t_srcAuthStr):
     t_srcRESTListObjects        = SRC_REST_PREAMBLE + "objects"
 
     srcObjListCnt = len(t_srcObjList)
@@ -135,7 +135,7 @@ def getSrcObjData(t_srcHost, t_srcPort, t_SrcObjList, t_srcAuthStr)
 # to the REST interface of the dst host in return for a BEARER TOKEN that is 
 # used for authentication of other commands.
 # -----------------------------------------------------------------------------
-def createDstAuthStr(t_dstHost, t_dstPort, t_dstPass)
+def createDstAuthStr(t_dstHost, t_dstPort, t_dstPass):
 
     t_dstRESTTokens         = DST_REST_PREAMBLE + "auth/tokens/"
     t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTTokens)    
@@ -171,7 +171,7 @@ def createDstAuthStr(t_dstHost, t_dstPort, t_dstPass)
 # The objective of this section is to use the Dst Authorization / Bearer Token
 # to query the dst hosts REST interface about keys.
 # -----------------------------------------------------------------------------
-def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr)
+def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
 
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
     t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList)   
@@ -198,7 +198,7 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr)
 # key block of object.  This section returns and collects the key block for 
 # each object.
 # -----------------------------------------------------------------------------
-def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr)
+def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
     
@@ -235,7 +235,7 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr)
 # key block of object.  This section returns and collects the key block for 
 # each object.
 # -----------------------------------------------------------------------------
-def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr)
+def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
     t_dstRESTKeyExportFlag  = "export"
