@@ -27,7 +27,7 @@ SRC_REST_PREAMBLE   = "/SKLM/rest/v1/"
 DST_REST_PREAMBLE   = "/api/v1/"
 
 # ---------------- Major Declarations --------------------------------------------
-srcObjList = []
+
 
 # ---------------- Functions-----------------------------------------------------
 # -------------------------------------------------------------------------------
@@ -65,7 +65,8 @@ def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
     r = requests.post(t_srcHostRESTCmd, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
 
     if(r.status_code != STATUS_CODE_OK):
-        print("Status Code:", r.status_code)
+        print("createSrcAuthStr Status Code:", r.status_code)
+        exit()
 
     # Extract the UserAuthId from the value of the key-value pair of the JSON reponse.
     t_srcUserAuthID         = r.json()['UserAuthId']
@@ -89,12 +90,12 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
     # Note that this REST Command does not require a body object in this GET REST Command
     r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
-        print("Status Code:", r.status_code)
+        print("getSrcObjList Status Code:", r.status_code)
+        exit()
 
     t_srcObjList           = r.json()['managedObject']
-    t_srcObjListCnt        = len(t_srcObjList)
 
-    return t_srcObjList, t_srcObjListCnt
+    return t_srcObjList
 
 # -----------------------------------------------------------------------------
 # REST Assembly for reading specific Object Data 
@@ -116,17 +117,16 @@ def getSrcObjData(t_srcHost, t_srcPort, t_SrcObjList, t_srcAuthStr)
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print("Status Code:", r.status_code)
+            print("getSrcObjData Status Code:", r.status_code)
+            exit()
 
         t_srcObjData       = r.json()['managedObject']
-        t_srcObjDataCnt    = len(t_srcObjData)
 
         print("\nObject UUID:", t_srcObjData['uuid'])
-    #    print("Number of Src Object Data Elements: ", t_srcObjDataCnt)
     #    print("Object Result:", t_srcObjData.keys())
     #    print("Object Result:", t_srcObjData.values())
         
-        return t_srcObjData, t_srcObjDataCnt
+        return t_srcObjData
 
 # -----------------------------------------------------------------------------
 # REST Assembly for DESTINATION HOST LOGIN 
@@ -154,14 +154,14 @@ def createDstAuthStr(t_dstHost, t_dstPort, t_dstPass)
     r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_dstBody), headers=t_dstHeaders, verify=False)
 
     if(r.status_code != STATUS_CODE_OK):
-        print("Status Code:", r.status_code)
+        print("createDstAuthStr Status Code:", r.status_code)
         print("All of response: ", r.reason)
         exit()
 
     # Extract the Bearer Token from the value of the key-value pair of the JSON reponse which is identified by the 'jwt' key.
     t_dstUserBearerToken            = r.json()['jwt']
-    t_dstUserBearerTokenDuration    = r.json()['duration']
-    t_dstAuthStr           = "Bearer "+t_dstUserBearerToken
+    # t_dstUserBearerTokenDuration    = r.json()['duration']
+    t_dstAuthStr                    = "Bearer "+t_dstUserBearerToken
 
     return t_dstAuthStr
 
@@ -182,16 +182,14 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr)
     r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
 
     if(r.status_code != STATUS_CODE_OK):
-        print("Status Code:", r.status_code)
+        print("getDstObjList Status Code:", r.status_code)
         print("All of response: ", r.reason)
         exit()
 
     t_dstObjList           = r.json()['reSrcs']
-    t_dstObjListCnt        = len(t_dstObjList)
 
-    # print("\nCount of Dst Objects: ", t_dstObjListCnt)
     # print("\n         Dst Objects: ", t_dstObjList[0].keys())
-    return t_dstObjList, t_dstObjListCnt
+    return t_dstObjList
     
 # -----------------------------------------------------------------------------
 # REST Assembly for READING specific Object Data from DESTINATION HOST
@@ -204,9 +202,9 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr)
 
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
     
-    t_dstObjListCnt = len(t_distObjList)
+    t_listLen = len(t_distObjList)
     
-    for obj in range(t_dstObjListCnt):
+    for obj in range(t_listLen):
         t_dstObjID = t_dstObjList[obj]['id']
         t_dstHostRESTCmd = "https://%s:%s%s/%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList, t_dstObjID)
         t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthStr}
@@ -214,24 +212,21 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr)
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print("Status Code:", r.status_code)
+            print("getDstObjData Status Code:", r.status_code)
             print("     Reason:", r.reason)
             print("Obj ID:", dstObjID)
             print("CMD: ",t_dstHostRESTCmd)
             continue
 
         t_dstObjData       = r.json()
-        t_dstObjDataCnt    = len(t_dstObjData)
 
         # print("\nObject UUID:", t_dstObjData['id'])
         # print("Exportable?:", t_dstObjData['unexportable'])
-        # print("Number of Dst Object Data Elements: ", t_dstObjDataCnt)
         # print("Object Result:", t_dstObjData.keys())
         # print("Object Result:", t_dstObjData.values())
         # print("Object Result:", dstObjData)
-        # print("\nTotal Dst Objects: ", dstObjListCnt)
         
-    return t_dstObjData, t_dstObjDataCnt
+    return t_dstObjData
 
 # -----------------------------------------------------------------------------
 # REST Assembly for EXPORTING specific Object Data from DESTINATION HOST
@@ -245,7 +240,9 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr)
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
     t_dstRESTKeyExportFlag  = "export"
 
-    for obj in range(dstObjListCnt):
+    t_listLen = len(dstObjList)
+    
+    for obj in range(t_listLen):
         dstObjID = dstObjList[obj]['id']
 
         # If the object is not exportable, then an error code will be returned.  So, check for exportability prior to
@@ -261,24 +258,21 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr)
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.post(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print("Status Code:", r.status_code)
+            print("exportDstObjData Status Code:", r.status_code)
             print("     Reason:", r.reason)
             print("Obj ID:", dstObjID)
             print("CMD: ",t_dstHostRESTCmd)
             continue
 
         t_dstObjData       = r.json()
-        t_dstObjDataCnt    = len(dstObjData)
 
         # print("\nObject UUID:", t_dstObjData['id'])
-        # print("Number of Dst Object Data Elements: ", t_dstObjDataCnt)
         # print("Object Result:", t_dstObjData.keys())
         # print("Object Result:", t_dstObjData.values())
         # print("Object Result:", t_dstObjData)
 
-    # print("\nTotal Dst Objects: ", t_dstObjListCnt)
     
-    return t_dstObjData, t_dstObjDataCnt
+    return t_dstObjData
 
 #
 # ---------------- End of Functions ----------------------------------------------
@@ -328,15 +322,15 @@ print("  Dest: ", t_dstHost, t_dstPort, t_dstUser)
 # --------------------------------------------------------------------------------
 # ---- MAIN MAIN MAIN ------------------------------------------------------------
 # --------------------------------------------------------------------------------
-srcAuthStr = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
+srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
 print("\n SAS:", srcAuthStr)
 
-srcObjList, srcObjListCnt = getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr)
-print("\nNumber of Src Objects: ", srcObjListCnt)
+srcObjList,     = getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr)
+print("\nNumber of Src Objects: ", len(srcObjList))
 
-srcObjData = getSrcOjbData(t_srcHost, t_srcPort, srcObjList, t_srcAuthStr)
+srcObjData      = getSrcOjbData(t_srcHost, t_srcPort, srcObjList, t_srcAuthStr)
 
-print("\nTotal Src Objects: ", srcObjListCnt)
+
 print("\n\n --- Src REST COMPLETE --- \n\n")
 exit()
 
