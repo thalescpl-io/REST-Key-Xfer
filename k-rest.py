@@ -187,7 +187,7 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
         print("All of response: ", r.reason)
         exit()
 
-    t_dstObjList           = r.json()['reSrcs']
+    t_dstObjList           = r.json()['resources']
 
     # print("\n         Dst Objects: ", t_dstObjList[0].keys())
     return t_dstObjList
