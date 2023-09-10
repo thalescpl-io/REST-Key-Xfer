@@ -202,10 +202,11 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
 def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
-    
-    t_dstObjData    = [] # created list to be returned later
+    t_ListLen               = len(t_dstObjList)
+
+    t_dstObjData            = [] # created list to be returned later
         
-    for obj in range(len(t_distObjList)):
+    for obj in range(t_ListLen):
         t_dstObjID = t_dstObjList[obj]['id']
         t_dstHostRESTCmd = "https://%s:%s%s/%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList, t_dstObjID)
         t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthStr}
@@ -238,17 +239,16 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
     t_dstRESTKeyExportFlag  = "export"
     
-    t_dstObjData    = [] # created list to be returned later
+    t_dstObjData            = [] # created list to be returned later
     
-    print("HERE: length of dstObjList: ", len(t_dstObjList))
-
-    for obj in range(len(t_dstObjList)):
+    t_ListLen               = len(t_dstObjList)
+    for obj in range(t_ListLen):
         dstObjID = dstObjList[obj]['id']
 
         # If the object is not exportable, then an error code will be returned.  So, check for exportability prior to
         # attempting to export the key material from the DESTINATION.
         if dstObjList[obj]['unexportable']==True:
-            tmpStr ="\nUNEXPORTABLE! ObjID: %s" %dstObjID
+            tmpStr ="UNEXPORTABLE! Dst Obj: %s ObjID: %s" %(obj, dstObjID)
             print(tmpStr)
             continue
 
@@ -267,9 +267,9 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
         t_data      = r.json()        
         t_dstObjData.append(t_data)  #Add data to te list
 
-        print("\nDst Export Object ID:", t_dstObjData[obj]['id'])
-
-        return t_dstObjData
+        print("Dst Object ", obj, " ID:", t_dstObjData[obj]['id'])
+    
+    return t_dstObjData
 
 #
 # ---------------- End of Functions ----------------------------------------------
@@ -339,8 +339,8 @@ dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
 print("\nNumber of Dst List Objects: ", len(dstObjList))
 
 dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
-print("Number of Dst Export Data Objects: ", len(dstObjData))
-print("Dst Data Object 0:", dstObjData[0])
+print("\nNumber of Dst Exportable Data Objects: ", len(dstObjData))
+print("\nDst Data Object 0:", dstObjData[0])
 
 print("\n\n --- Dst REST COMPLETE --- \n")
 
