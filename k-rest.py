@@ -271,6 +271,72 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
     
     return t_dstObjData
 
+
+# -----------------------------------------------------------------------------
+# REST Assembly for IMPORTING specific Object Data into DESTINATION HOST
+#
+# Using the VAULT/KEYS2 API, this code writes adds individual keys to the desitation.
+# This routine needs to be called for EACH key that needs to be written.
+# -----------------------------------------------------------------------------
+def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_srcObj):
+    t_success = True
+    
+    t_dstRESTKeyCreate        = DST_REST_PREAMBLE + "vault/keys2"
+
+    # define object
+    # populate objet - src-dst mapping
+
+    t_dstObj = {}   # create a dicionary to submit
+    
+    t_dstObj['name']        = "My First Key"
+    t_dstObj['usageMask']   = 76    # Uses?
+    t_dstObj['algorithm']   = "aes"
+    t_dstObj['meta']        = {"ownerId": "local|e923406f-5a62-4d6e-972b-8f6866164a07"}
+    d_dstObj['state']       = "Active"  # states?
+    d_dstObj['material']    = 'cc1581e80414a258693bcb823ef76d378f7dfee8839bc6ed58fa6d303c908324'
+    d_dstObj['format']      = 'raw'
+    
+#{
+#  "name": "My Encryption Key",
+#  "usageMask": 12,
+#  "algorithm": "aes",
+#  "meta": {
+#    "ownerId": "local|1a45d..."
+#  },
+#  "state": "Pre-Active",
+#  "deactivationDate": "2018-10-02T14:24:37.436073Z",
+#  "protectStopDate": "2018-10-02T14:24:37.436073Z",
+#  "aliases": [
+#    {
+#      "alias": "altname1",
+#      "type": "string"
+#    },
+#    {
+#      "alias": "altname2:keysecure:gemalto:com",
+#      "type": "uri"
+#    }
+#  ]
+#}
+    
+    t_dstHostRESTCmd = "https://%s:%s%s/%s" %(t_dstHost, t_dstPort, t_dstRESTKeyCreate)
+    t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthStr}
+
+    # Note that REST Command does not require a body object in this GET REST Command
+    r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_dstObj), headers=t_dstHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        print("importDstDataObject Status Code:", r.status_code)
+        print("     Reason:", r.reason)
+        print("Obj ID:", dstObjID)
+        print("CMD: ",t_dstHostRESTCmd)
+        
+        success = False
+    else
+    
+        t_Response      = r.json()        
+        
+        print("Created Object: ", t_response)
+    
+    return t_success
 #
 # ---------------- End of Functions ----------------------------------------------
 #
@@ -331,7 +397,6 @@ print("Src Data Object 0:", srcObjData[0])
 
 print("\n\n --- Src REST COMPLETE --- \n")
 
-
 dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
 print("\nDAS: ", dstAuthStr)
 
@@ -343,6 +408,9 @@ print("\nNumber of Dst Exportable Data Objects: ", len(dstObjData))
 print("\nDst Data Object 0:", dstObjData[0])
 
 print("\n\n --- Dst REST COMPLETE --- \n")
+
+success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, srcObjData[0])
+print("\n importDstDataOjbect Success:", success)
 
 # Next STEPS:  Map Object Dictionary keys between Src an Destination and they copy over.
 
