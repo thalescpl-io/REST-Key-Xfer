@@ -239,6 +239,8 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
     t_dstRESTKeyExportFlag  = "export"
     
     t_dstObjData    = [] # created list to be returned later
+    
+    print("HERE: length of dstObjList: ", len(t_dstObjList))
 
     for obj in range(len(t_dstObjList)):
         dstObjID = dstObjList[obj]['id']
@@ -321,7 +323,7 @@ srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
 print("\nSAS:", srcAuthStr)
 
 srcObjList      = getSrcObjList(srcHost, srcPort, srcAuthStr)
-print("Number of Src List Objects: ", len(srcObjList))
+print("\nNumber of Src List Objects: ", len(srcObjList))
 
 srcObjData      = getSrcObjData(srcHost, srcPort, srcObjList, srcAuthStr)
 print("Number of Src Data Objects: ", len(srcObjData))
@@ -334,7 +336,7 @@ dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
 print("\nDAS: ", dstAuthStr)
 
 dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
-print("Number of Dst List Objects: ", len(dstObjList))
+print("\nNumber of Dst List Objects: ", len(dstObjList))
 
 dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
 print("Number of Dst Export Data Objects: ", len(dstObjData))
