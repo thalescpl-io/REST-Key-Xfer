@@ -220,7 +220,7 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
             continue
 
         t_data      = r.json()
-        t_dstObjData.Append(t_data)     # Add data to list
+        t_dstObjData.append(t_data)     # Add data to list
         
         print("Dst Object ", obj, " ID:", t_dstObjData[obj]['id'])
 
@@ -262,9 +262,8 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
             print("CMD: ",t_dstHostRESTCmd)
             continue
 
-        t_data      = r.json()
-        
-        t_dstObjData.Append(t_data)  #Add data to te list
+        t_data      = r.json()        
+        t_dstObjData.append(t_data)  #Add data to te list
 
         print("\nDst Export Object ID:", t_dstObjData[obj]['id'])
 
