@@ -125,7 +125,7 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
         t_data   = r.json()['managedObject']
         t_srcObjData.append(t_data)     # Add data to list
 
-        print("Object ", obj, " UUID:", t_srcObjData[obj]['uuid'])
+        print("Src Object ", obj, " UUID:", t_srcObjData[obj]['uuid'])
         
     return t_srcObjData
 
@@ -136,7 +136,7 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
 # to the REST interface of the dst host in return for a BEARER TOKEN that is 
 # used for authentication of other commands.
 # -----------------------------------------------------------------------------
-def createDstAuthStr(t_dstHost, t_dstPort, t_dstPass):
+def createDstAuthStr(t_dstHost, t_dstPort, t_dstUser, t_dstPass):
 
     t_dstRESTTokens         = DST_REST_PREAMBLE + "auth/tokens/"
     t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTTokens)    
@@ -203,9 +203,9 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
     
-    t_listLen = len(t_distObjList)
-    
-    for obj in range(t_listLen):
+    t_dstObjData    = [] # created list to be returned later
+        
+    for obj in range(len(t_distObjList)):
         t_dstObjID = t_dstObjList[obj]['id']
         t_dstHostRESTCmd = "https://%s:%s%s/%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList, t_dstObjID)
         t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthStr}
@@ -219,14 +219,11 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
             print("CMD: ",t_dstHostRESTCmd)
             continue
 
-        t_dstObjData       = r.json()
-
-        # print("\nObject UUID:", t_dstObjData['id'])
-        # print("Exportable?:", t_dstObjData['unexportable'])
-        # print("Object Result:", t_dstObjData.keys())
-        # print("Object Result:", t_dstObjData.values())
-        # print("Object Result:", dstObjData)
+        t_data      = r.json()
+        t_dstObjData.Append(t_data)     # Add data to list
         
+        print("Dst Object ", obj, " ID:", t_dstObjData[obj]['id'])
+
     return t_dstObjData
 
 # -----------------------------------------------------------------------------
@@ -240,10 +237,10 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
     t_dstRESTKeyExportFlag  = "export"
-
-    t_listLen = len(dstObjList)
     
-    for obj in range(t_listLen):
+    t_dstObjData    = [] # created list to be returned later
+
+    for obj in range(len(t_dstObjList)):
         dstObjID = dstObjList[obj]['id']
 
         # If the object is not exportable, then an error code will be returned.  So, check for exportability prior to
@@ -265,15 +262,13 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
             print("CMD: ",t_dstHostRESTCmd)
             continue
 
-        t_dstObjData       = r.json()
+        t_data      = r.json()
+        
+        t_dstObjData.Append(t_data)  #Add data to te list
 
-        # print("\nObject UUID:", t_dstObjData['id'])
-        # print("Object Result:", t_dstObjData.keys())
-        # print("Object Result:", t_dstObjData.values())
-        # print("Object Result:", t_dstObjData)
+        print("\nDst Export Object ID:", t_dstObjData[obj]['id'])
 
-    
-    return t_dstObjData
+        return t_dstObjData
 
 #
 # ---------------- End of Functions ----------------------------------------------
@@ -309,14 +304,14 @@ srcPort = str(" ".join(args.srcPort))
 srcUser = str(" ".join(args.srcUser))
 srcPass = str(" ".join(args.srcPass))
 
-t_dstHost = str(" ".join(args.dstHost))
-t_dstPort = str(" ".join(args.dstPort))
-t_dstUser = str(" ".join(args.dstUser))
-t_dstPass = str(" ".join(args.dstPass))
+dstHost = str(" ".join(args.dstHost))
+dstPort = str(" ".join(args.dstPort))
+dstUser = str(" ".join(args.dstUser))
+dstPass = str(" ".join(args.dstPass))
 
 print("\n ---- INPUT STATS: ----")
 print(" Src: ", srcHost, srcPort, srcUser)
-print("Dest: ", t_dstHost, t_dstPort, t_dstUser)
+print("Dest: ", dstHost, dstPort, dstUser)
 
 # ---- Parsing Complete ----------------------------------------------------------
 
@@ -327,15 +322,26 @@ srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
 print("\nSAS:", srcAuthStr)
 
 srcObjList      = getSrcObjList(srcHost, srcPort, srcAuthStr)
-print("Number of Src Objects: ", len(srcObjList))
+print("Number of Src List Objects: ", len(srcObjList))
 
 srcObjData      = getSrcObjData(srcHost, srcPort, srcObjList, srcAuthStr)
-print("Number of Src Data Objects:", len(srcObjData))
+print("Number of Src Data Objects: ", len(srcObjData))
 print("Src Data Object 0:", srcObjData[0])
 
-print("\n\n --- Src REST COMPLETE --- \n\n")
-exit()
+print("\n\n --- Src REST COMPLETE --- \n")
 
+
+dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
+print("\nDAS: ", dstAuthStr)
+
+dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
+print("Number of Dst List Objects: ", len(dstObjList))
+
+dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
+print("Number of Dst Export Data Objects: ", len(dstObjData))
+print("Dst Data Object 0:", dstObjData[0])
+
+print("\n\n --- Dst REST COMPLETE --- \n")
 
 # Next STEPS:  Map Object Dictionary keys between Src an Destination and they copy over.
 
