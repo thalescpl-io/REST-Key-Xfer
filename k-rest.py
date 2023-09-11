@@ -292,9 +292,9 @@ def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_srcObj)
     t_dstObj['usageMask']   = 76    # Uses?
     t_dstObj['algorithm']   = "aes"
     t_dstObj['meta']        = {"ownerId": "local|e923406f-5a62-4d6e-972b-8f6866164a07"}
-    d_dstObj['state']       = "Active"  # states?
-    d_dstObj['material']    = 'cc1581e80414a258693bcb823ef76d378f7dfee8839bc6ed58fa6d303c908324'
-    d_dstObj['format']      = 'raw'
+    t_dstObj['state']       = "Active"  # states?
+    t_dstObj['material']    = 'cc1581e80414a258693bcb823ef76d378f7dfee8839bc6ed58fa6d303c908324'
+    t_dstObj['format']      = 'raw'
     
 #{
 #  "name": "My Encryption Key",
@@ -318,7 +318,7 @@ def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_srcObj)
 #  ]
 #}
     
-    t_dstHostRESTCmd = "https://%s:%s%s/%s" %(t_dstHost, t_dstPort, t_dstRESTKeyCreate)
+    t_dstHostRESTCmd = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyCreate)
     t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthStr}
 
     # Note that REST Command does not require a body object in this GET REST Command
@@ -326,11 +326,9 @@ def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_srcObj)
     if(r.status_code != STATUS_CODE_OK):
         print("importDstDataObject Status Code:", r.status_code)
         print("     Reason:", r.reason)
-        print("Obj ID:", dstObjID)
-        print("CMD: ",t_dstHostRESTCmd)
         
         success = False
-    else
+    else:
     
         t_Response      = r.json()        
         
@@ -415,3 +413,5 @@ print("\n importDstDataOjbect Success:", success)
 # Next STEPS:  Map Object Dictionary keys between Src an Destination and they copy over.
 
 print("\n ---- COMPLETE ---- ")
+#####################################################################################
+#
