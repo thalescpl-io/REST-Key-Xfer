@@ -91,6 +91,7 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
     r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
         print("getSrcObjList Status Code:", r.status_code)
+        print("getSrcObjList Reason:", r.reason)
         exit()
 
     t_srcObjList           = r.json()['managedObject']
@@ -112,9 +113,9 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
     t_srcObjData    = [] # created list to be returned later
 
     for obj in range(t_ListLen):
-        t_srcObjID = t_srcObjList[obj]['uuid']
-        t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, t_srcObjID)
-        t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
+        t_srcObjID          = t_srcObjList[obj]['uuid']
+        t_srcHostRESTCmd    = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, t_srcObjID)
+        t_srcHeaders        = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
 
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
@@ -129,6 +130,101 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
         
     return t_srcObjData
 
+# -----------------------------------------------------------------------------
+# REST Assembly for reading specific Key List 
+#
+# Using the keys API, the src host delivers all material except for the actual
+# key block of keys.  Once we have this information (especially the UUID), we can
+# retrieve the key block material
+# -----------------------------------------------------------------------------
+def getSrcKeyList(t_srcHost, t_srcPort, t_srcAuthStr):
+
+    t_srcRESTListKeys       = SRC_REST_PREAMBLE + "keys"
+    t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListKeys)
+
+    t_srcHeaders            = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
+
+    # Note that this REST Command does not require a body object in this GET REST Command
+    r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        print("getSrcKeyList Status Code:", r.status_code)
+        exit()
+
+    t_srcKeyList           = r.json()
+
+    return t_srcKeyList
+
+# -----------------------------------------------------------------------------
+# REST Assembly for reading specific Key Data 
+#
+# Using the getSrcKeyList API above, the src host delivers all BUT the actual
+# key block of a key.  This section returns and collects the key block for 
+# each key.
+# -----------------------------------------------------------------------------
+def getSrcKeyData(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
+
+    t_srcRESTGetKeys        = SRC_REST_PREAMBLE + "keys/export"
+    t_ListLen               = len(t_srcKeyList)
+
+    t_srcKeyData    = [] # created list to be returned later
+
+    for obj in range(t_ListLen):
+        t_srcKeyAlias       = t_srcKeyList[obj]['alias']
+        t_srcHostRESTCmd    = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTGetkeys, t_srcKeyAlias)
+        t_srcHeaders        = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
+
+        # Note that REST Command does not require a body object in this GET REST Command
+        r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+        if(r.status_code != STATUS_CODE_OK):
+            print("getSrcKeyData Status Code:", r.status_code)
+            exit()
+
+        t_data          = r.json()
+        t_srcKeyData.append(t_data)     # Add data to list
+
+        print("Src Key ", obj, " Alias:", t_srcKeyData[obj]['alias'])
+        
+    return t_srcKeyData
+
+# -----------------------------------------------------------------------------
+# REST Assembly for reading specific Key Data via OBJECT
+#
+# Using the getSrcKeyList API above, the src host delivers all BUT the actual
+# key block of a key.  This section returns and collects the key block for 
+# each key by collecting them from the OBJECT REST API.
+# -----------------------------------------------------------------------------
+def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
+    
+    t_srcRESTKeyObjects = SRC_REST_PREAMBLE + "objects"
+    t_ListLen           = len(t_srcKeyList)
+
+    t_srcKeyObjDataList = [] # created list to be returned later
+    t_cnt               = 0  # keep track of the number of exportable key objects
+
+    for obj in range(t_ListLen):
+        print("Src Key List Info: ", obj, " Alias: ", t_srcKeyList[obj]['alias'], " UUID: ", t_srcKeyList[obj]['uuid'])
+        t_srcObjID      = t_srcKeyList[obj]['uuid']
+        t_srcObjAlias   = t_srcKeyList[obj]['alias']
+        
+        t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjects, t_srcObjID)
+        t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
+
+        # Note that REST Command does not require a body object in this GET REST Command
+        r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+        if(r.status_code != STATUS_CODE_OK):
+            print("getSrcKeyObjData Status Code:", r.status_code)
+            print("getSrcKeyObjData Reason:", r.reason)
+            continue
+            
+        else:
+            t_data   = r.json()['managedObject']
+            t_srcKeyObjDataList.append(t_data)     # Add data to list
+
+            # print("Src Key ObjData", obj, " Alias: ", t_srcKeyObjData[obj]['alias'], " UUID: ", t_srcKeyObjData[obj]['uuid'])
+            print("Src Key ObjData", t_cnt, " Alias: ", t_srcKeyObjDataList[t_cnt]['uuid'], "\nList Size: ", len(t_srcKeyObjDataList))
+            t_cnt += 1
+        
+    return t_srcKeyObjDataList
 # -----------------------------------------------------------------------------
 # REST Assembly for DESTINATION HOST LOGIN 
 # 
@@ -393,7 +489,16 @@ srcObjData      = getSrcObjData(srcHost, srcPort, srcObjList, srcAuthStr)
 print("Number of Src Data Objects: ", len(srcObjData))
 print("Src Data Object 0:", srcObjData[0])
 
+srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
+print("\nNumber of Src List Keys: ", len(srcKeyList))
+# print("\nSrc List Keys: \n", srcKeyList)
+
+srcKeyObjDataList    = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr)
+print("\nNumber of Src Key Objects: ", len(srcKeyObjDataList))
+
 print("\n\n --- Src REST COMPLETE --- \n")
+
+exit() # Temporarily Stop here
 
 dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
 print("\nDAS: ", dstAuthStr)
