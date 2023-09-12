@@ -8,13 +8,14 @@
 #                   
 #####################################################################################
 
-import argparse
-import binascii
-import codecs
-import hashlib
-import json
-import requests
-from urllib3.exceptions import InsecureRequestWarning
+import  argparse
+import  binascii
+import  codecs
+import  hashlib
+import  json
+import  requests
+from    urllib3.exceptions import InsecureRequestWarning
+from    kerrors import *
 
 # ---------------- CONSTANTS -----------------------------------------------------
 DEFAULT_SRC_PORT    = ["9443"]
@@ -65,12 +66,12 @@ def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
     r = requests.post(t_srcHostRESTCmd, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
 
     if(r.status_code != STATUS_CODE_OK):
-        print("createSrcAuthStr Status Code:", r.status_code)
+        kPrintError("createSrcAuthStr", r)
         exit()
 
     # Extract the UserAuthId from the value of the key-value pair of the JSON reponse.
     t_srcUserAuthID         = r.json()['UserAuthId']
-    t_srcAuthStr   = "SKLMAuth UserAuthId="+t_srcUserAuthID 
+    t_srcAuthStr            = "SKLMAuth UserAuthId="+t_srcUserAuthID 
 
     return t_srcAuthStr
 
@@ -82,7 +83,7 @@ def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
 # -----------------------------------------------------------------------------
 def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 
-    t_srcRESTListObjects    = SRC_REST_PREAMBLE + "objects"
+    t_srcRESTListObjects    = SRC_REST_PREAMBLE + "objects?clientName=KMIP_SCRIPT"
     t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
 
     t_srcHeaders            = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
@@ -90,8 +91,7 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
     # Note that this REST Command does not require a body object in this GET REST Command
     r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
-        print("getSrcObjList Status Code:", r.status_code)
-        print("getSrcObjList Reason:", r.reason)
+        kPrintError("getSrcObjList", r)
         exit()
 
     t_srcObjList           = r.json()['managedObject']
@@ -120,7 +120,7 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print("getSrcObjData Status Code:", r.status_code)
+            kPrintError("getSrcObj", r)
             exit()
 
         t_data   = r.json()['managedObject']
@@ -147,7 +147,7 @@ def getSrcKeyList(t_srcHost, t_srcPort, t_srcAuthStr):
     # Note that this REST Command does not require a body object in this GET REST Command
     r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
-        print("getSrcKeyList Status Code:", r.status_code)
+        kPrintError("getSrcKeyList", r)
         exit()
 
     t_srcKeyList           = r.json()
@@ -176,7 +176,7 @@ def getSrcKeyData(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print("getSrcKeyData Status Code:", r.status_code)
+            kPrintError("getSrcKeyData", r)
             exit()
 
         t_data          = r.json()
@@ -202,7 +202,20 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
     t_cnt               = 0  # keep track of the number of exportable key objects
 
     for obj in range(t_ListLen):
-        print("Src Key List Info: ", obj, " Alias: ", t_srcKeyList[obj]['alias'], " UUID: ", t_srcKeyList[obj]['uuid'])
+        
+        # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr
+        t_alias = str(t_srcKeyList[obj]['alias'])
+        t_uuid  = str(t_srcKeyList[obj]['uuid'])
+        t_ksn   = str(t_srcKeyList[obj]['key store name'])
+        t_ksu   = str(t_srcKeyList[obj]['key store uuid'])
+        t_owner = str(t_srcKeyList[obj]['owner'])
+        t_usage = str(t_srcKeyList[obj]['usage'])
+        t_kt    = str(t_srcKeyList[obj]['key type'])
+        
+        tmpStr = "Src Key List Info: %s Alias: %s UUID: %s\n     Key Store Name: %s Key Store UUID: %s\n     Owner: %s\n     Usage: %s Key Type: %s" %(obj, t_alias, t_uuid, t_ksn, t_ksu, t_owner, t_usage, t_kt)
+
+        print(tmpStr)
+
         t_srcObjID      = t_srcKeyList[obj]['uuid']
         t_srcObjAlias   = t_srcKeyList[obj]['alias']
         
@@ -212,8 +225,7 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print("getSrcKeyObjData Status Code:", r.status_code)
-            print("getSrcKeyObjData Reason:", r.reason)
+            kPrintError("getSrcKeyObjDataList", r)
             continue
             
         else:
@@ -251,8 +263,7 @@ def createDstAuthStr(t_dstHost, t_dstPort, t_dstUser, t_dstPass):
     r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_dstBody), headers=t_dstHeaders, verify=False)
 
     if(r.status_code != STATUS_CODE_OK):
-        print("createDstAuthStr Status Code:", r.status_code)
-        print("All of response: ", r.reason)
+        kPrintError("createDstAuthStr", r)
         exit()
 
     # Extract the Bearer Token from the value of the key-value pair of the JSON reponse which is identified by the 'jwt' key.
@@ -279,8 +290,7 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
     r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
 
     if(r.status_code != STATUS_CODE_OK):
-        print("getDstObjList Status Code:", r.status_code)
-        print("All of response: ", r.reason)
+        kPrintError("getDstObjList", r)
         exit()
 
     t_dstObjList           = r.json()['resources']
@@ -310,10 +320,8 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print("getDstObjData Status Code:", r.status_code)
-            print("     Reason:", r.reason)
-            print("Obj ID:", dstObjID)
-            print("CMD: ",t_dstHostRESTCmd)
+            print("  Obj ID:", dstObjID)
+            kPrintError("getDstObjData", r)
             continue
 
         t_data      = r.json()
@@ -344,7 +352,7 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
         # If the object is not exportable, then an error code will be returned.  So, check for exportability prior to
         # attempting to export the key material from the DESTINATION.
         if dstObjList[obj]['unexportable']==True:
-            tmpStr ="UNEXPORTABLE! Dst Obj: %s ObjID: %s" %(obj, dstObjID)
+            tmpStr ="  UNEXPORTABLE! Dst Obj: %s ObjID: %s" %(obj, dstObjID)
             print(tmpStr)
             continue
 
@@ -354,10 +362,8 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.post(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print("exportDstObjData Status Code:", r.status_code)
-            print("     Reason:", r.reason)
-            print("Obj ID:", dstObjID)
-            print("CMD: ",t_dstHostRESTCmd)
+            print("  Obj ID:", dstObjID)
+            kPrintError("exportDstObjData", r)
             continue
 
         t_data      = r.json()        
@@ -420,9 +426,7 @@ def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_srcObj)
     # Note that REST Command does not require a body object in this GET REST Command
     r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_dstObj), headers=t_dstHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
-        print("importDstDataObject Status Code:", r.status_code)
-        print("     Reason:", r.reason)
-        
+        kPrintError("importDstDataObject", r)        
         success = False
     else:
     
@@ -482,19 +486,23 @@ print("Dest: ", dstHost, dstPort, dstUser)
 srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
 print("\nSAS:", srcAuthStr)
 
-srcObjList      = getSrcObjList(srcHost, srcPort, srcAuthStr)
-print("\nNumber of Src List Objects: ", len(srcObjList))
+# srcObjList      = getSrcObjList(srcHost, srcPort, srcAuthStr)
+# print("\nNumber of Src List Objects: ", len(srcObjList))
 
-srcObjData      = getSrcObjData(srcHost, srcPort, srcObjList, srcAuthStr)
-print("Number of Src Data Objects: ", len(srcObjData))
-print("Src Data Object 0:", srcObjData[0])
+# srcObjData      = getSrcObjData(srcHost, srcPort, srcObjList, srcAuthStr)
+# print("Number of Src Data Objects: ", len(srcObjData))
+# print("Src Data Object 0:", srcObjData[0])
 
 srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
 print("\nNumber of Src List Keys: ", len(srcKeyList))
-# print("\nSrc List Keys: \n", srcKeyList)
+print("\nSrc List Keys: \n", json.dumps(srcKeyList, indent=4))
 
 srcKeyObjDataList    = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr)
 print("\nNumber of Src Key Objects: ", len(srcKeyObjDataList))
+
+
+# print("\nSrc List Keys: \n", srcKeyList[25])
+#print("\nSrc List Keys: \n", srcKeyList[29])
 
 print("\n\n --- Src REST COMPLETE --- \n")
 
