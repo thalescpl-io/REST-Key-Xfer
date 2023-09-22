@@ -67,6 +67,44 @@ class GKLMAttributeType(enum.Enum):
     LAST_CHANGED_DATE           = 'Last Changed Date'
     COMPROMISE_OCCURANCE_DATE   = 'Compromise Occurence Date'
     LEASE_TIME                  = 'Lease Time'
+    KEY_BLOCK                   = "KEY_BLOCK"
+    KEY_MATERIAL                = "KEY_MATERIAL"
+    KEY_FORMAT                  = "KEY_FORMAT"
+    
+class CMAttributeType(enum.Enum):
+    ID                          = 'id'
+    URI                         = 'uri'
+    ACCOUNT                     = 'account'
+    APPLICATION                 = 'application'
+    DEV_ACCOUNT                 = 'devAccount'
+    CREATED_AT                  = 'createdAt'
+    NAME                        = 'name'
+    UPDATED_AT                  = 'updatedAT'
+    ACTIVATION_DATE             = 'activationDate'
+    STATE                       = 'state'
+    USAGE                       = 'usage'
+    USAGE_MASK                  = 'usageMask'
+    META                        = 'meta'
+    OBJECT_TYPE                 = 'objectType'
+    ALIASES                     = 'aliases'
+    SHA1_FINGERPRINT            = 'sha1Fingerprint'
+    SHAT256_FINGERPRINT         = 'sha256Fingerprint'
+    DEFAULT_IV                  = 'defaultIV'
+    VERSION                     = 'version'
+    ALGORITHM                   = 'algorithm'
+    SIZE                        = 'size'
+    UNEXPORTABLE                = 'unexportable'
+    UNDELETEABLE                = 'undeletable'
+    NEVER_EXPORTED              = 'neverExported'
+    NEVER_EXPORTABLE            = 'neverExportable'
+    EMPTY_MATERIAL              = 'emptyMaterial'
+    UUID                        = 'uuid'
+    MUID                        = 'muid'
+    MATERIAL                    = 'material'
+    FORMAT                      = 'format'
+        
+
+    
     
     
     

@@ -16,9 +16,7 @@ import  hashlib
 #import  requests
 #from    urllib3.exceptions import InsecureRequestWarning
 from    kerrors import *
-import  krestenums
 from    krestcmds import *
-
 
 # ---------------- Constants ----------------------------------------------------
 DEFAULT_SRC_PORT    = ["9443"]
@@ -85,21 +83,39 @@ print("Dest: ", dstHost, dstPort, dstUser)
 # ---- MAIN MAIN MAIN ------------------------------------------------------------
 # --------------------------------------------------------------------------------
 
-# Get Sourth Authorization Token/String
+# Get Source Authorization Token/String
 srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
 print("\nSAS:", srcAuthStr)
 
+# Get list of keys
 srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
 print("\nNumber of Src List Keys: ", len(srcKeyList))
 # print("\nSrc List Keys: \n", json.dumps(srcKeyList, indent=4))
 
-srcKeyObjDataList    = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr)
-print("\nNumber of Src Key Objects: ", len(srcKeyObjDataList))
+# Get detailed information, including key material, for each key/object.
+# The returned list is a COMPLETE package of key attributes and key material for
+# each object.
 
-print("\n\ --- SRC KEY OBJECT REST EXPORT COMPLETE --- \n")
+srcKeyObjDataList   = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr)
+srcKeyObjCnt        = len(srcKeyObjDataList)
+print("\nLength of Src Key Objects: ",srcKeyObjCnt)
+print("\nSrc Obj Data List: ", json.dumps(srcKeyObjDataList[1], skipkeys = True, allow_nan = True, indent = 3))
 
-exit() # Temporarily Stop here
 
+print("\n --- SRC KEY OBJECT REST EXPORT COMPLETE --- \n")
+
+#  Map GKLM keys and values to CM
+xKeyObj     = {}
+xKeyObjList = []
+
+for k in range(srcKeyObjCnt):
+    xKeyObj[CMAttributeType.UUID.value] = srcKeyObjDataList[k][GKLMAttributeType.UUID.value]
+    xKeyObjList.append(xKeyObj)
+    print("\n Key Obj: ", json.dumps(xKeyObj, skipkeys = True, allow_nan = True, indent = 3))
+
+exit()
+
+# Get Destination Authorization Token/String
 dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
 print("\nDAS: ", dstAuthStr)
 
@@ -108,9 +124,12 @@ print("\nNumber of Dst List Objects: ", len(dstObjList))
 
 dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
 print("\nNumber of Dst Exportable Data Objects: ", len(dstObjData))
-print("\nDst Data Object 0:", dstObjData[0])
+print("\nDst Data Object:", json.dumps(dstObjData[6], skipkeys = True, allow_nan = True, indent = 3))
+print("\n Dst Data Object Type: ", type(dstObjData[6]))
 
 print("\n\n --- Dst REST COMPLETE --- \n")
+
+exit() # Temporarily Stop here.  Lets see if we can properly read before we write.
 
 success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, srcObjData[0])
 print("\n importDstDataOjbect Success:", success)

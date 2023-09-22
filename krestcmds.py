@@ -9,6 +9,8 @@ from    urllib3.exceptions import InsecureRequestWarning
 import  json
 from    kerrors import *
 from    krestenums import ObjectType, GKLMAttributeType
+from    krestenums import CMAttributeType
+
 import  enum
 
 # ---------------- CONSTANTS -----------------------------------------------------
@@ -18,6 +20,8 @@ HTTPS_PORT_VALUE    = 443
 SRC_REST_PREAMBLE   = "/SKLM/rest/v1/"
 DST_REST_PREAMBLE   = "/api/v1/"
 
+
+def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
 # -----------------------------------------------------------------------------
 # REST Assembly for Src LOGIN 
 # 
@@ -25,8 +29,6 @@ DST_REST_PREAMBLE   = "/api/v1/"
 # to the REST interface of the src host in return for a AUTHORIZATION STRING (token)
 # that is used for authentication of other commands
 # -----------------------------------------------------------------------------
-def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
-
     t_srcRESTLogin          = SRC_REST_PREAMBLE + "ckms/login"
     t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTLogin)
 
@@ -52,14 +54,15 @@ def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
 
     return t_srcAuthStr
 
+def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 # -----------------------------------------------------------------------------
 # REST Assembly for reading List of Src Cryptographic Objects 
 #
 # The objective of this section is to querry a list of cryptographic
 # objects current stored or managed by the src host.
-# -----------------------------------------------------------------------------
-def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 
+# Returns a list of cryptographic objects
+# -----------------------------------------------------------------------------
     t_srcRESTListObjects    = SRC_REST_PREAMBLE + "objects?clientName=KMIP_SCRIPT"
     t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
 
@@ -75,22 +78,21 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 
     return t_srcObjList
 
+def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
 # -----------------------------------------------------------------------------
 # REST Assembly for reading specific Object Data 
 #
-# Using the LISTOBJECTs API above, the src host delivers all but the actual
+# Using the getSrcObjList API above, the src host delivers all BUT the actual
 # key block of object.  This section returns and collects the key block for 
 # each object.
 # -----------------------------------------------------------------------------
-def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
-
     t_srcRESTListObjects        = SRC_REST_PREAMBLE + "objects"
     t_ListLen = len(t_srcObjList)
 
     t_srcObjData    = [] # created list to be returned later
 
     for obj in range(t_ListLen):
-        t_srcObjID          = t_srcObjList[obj]['uuid']
+        t_srcObjID          = t_srcObjList[obj][GKLMAttributeType.UUID.value]
         t_srcHostRESTCmd    = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects, t_srcObjID)
         t_srcHeaders        = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
 
@@ -103,19 +105,20 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
         t_data   = r.json()['managedObject']
         t_srcObjData.append(t_data)     # Add data to list
 
-        print("Src Object ", obj, " UUID:", t_srcObjData[obj]['uuid'])
+        print("Src Object ", obj, " UUID:", t_srcObjData[obj][GKLMAttributeType.UUID.value])
         
     return t_srcObjData
 
+def getSrcKeyList(t_srcHost, t_srcPort, t_srcAuthStr):
 # -----------------------------------------------------------------------------
 # REST Assembly for reading specific Key List 
 #
-# Using the keys API, the src host delivers all material except for the actual
+# Using the keys API, the src host delivers all material EXCEPT for the actual
 # key block of keys.  Once we have this information (especially the UUID), we can
 # retrieve the key block material
+#
+# Returns a list of keys, but no key material
 # -----------------------------------------------------------------------------
-def getSrcKeyList(t_srcHost, t_srcPort, t_srcAuthStr):
-
     t_srcRESTListKeys       = SRC_REST_PREAMBLE + "keys"
     t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListKeys)
 
@@ -131,37 +134,40 @@ def getSrcKeyList(t_srcHost, t_srcPort, t_srcAuthStr):
 
     return t_srcKeyList
 
+def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
 # -----------------------------------------------------------------------------
 # REST Assembly for reading specific Key Data 
 #
-# Using the getSrcKeyList API above, the src host delivers all BUT the actual
-# key block of a key.  This section returns and collects the key block for 
-# each key.
+# Using the getSrcKeyList API above, this routin queries the src and returns
+# the KEYBLOCK for each key.
+#
+# NOTE that this call exports the key into an encrypted file on GKLM....
+#
+# * INCOMPLETE *
 # -----------------------------------------------------------------------------
-def getSrcKeyData(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
-
     t_srcRESTGetKeys        = SRC_REST_PREAMBLE + "keys/export"
     t_ListLen               = len(t_srcKeyList)
 
-    t_srcKeyData    = [] # created list to be returned later
+    t_srcKeyDataList        = [] # created list to be returned later
 
     for obj in range(t_ListLen):
-        t_srcKeyAlias       = t_srcKeyList[obj]['alias']
-        t_srcHostRESTCmd    = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTGetkeys, t_srcKeyAlias)
+        t_srcKeyAlias       = t_srcKeyList[obj][GKLMAttributeType.ALIAS.value]
+        t_srcHostRESTCmd    = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTGetKeys, t_srcKeyAlias)
+        
         t_srcHeaders        = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
 
         # Note that REST Command does not require a body object in this GET REST Command
-        r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+        r = requests.post(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            kPrintError("getSrcKeyData", r)
+            kPrintError("getSrcKeyDataList", r)
             exit()
 
         t_data          = r.json()
         t_srcKeyData.append(t_data)     # Add data to list
 
-        print("Src Key ", obj, " Alias:", t_srcKeyData[obj]['alias'])
+        print("Src Key ", obj, " Alias:", t_srcKeyData[obj][GKLMAttributeType.ALIAS.value])
         
-    return t_srcKeyData
+    return t_srcKeyDataList
 
 # -----------------------------------------------------------------------------
 # REST Assembly for reading specific Key Data via OBJECT
@@ -190,20 +196,24 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
         t_usage = str(t_srcKeyList[obj][GKLMAttributeType.USAGE.value])
         t_kt    = str(t_srcKeyList[obj][GKLMAttributeType.KEY_TYPE.value])
         
-        tmpStr = "\nSrc Key List Info: %s Alias: %s UUID: %s\n     Key Store Name: %s Key Store UUID: %s\n     Owner: %s\n     Usage: %s Key Type: %s" %(obj, t_alias, t_uuid, t_ksn, t_ksu, t_owner, t_usage, t_kt)
+        tmpStr =    "\nSrc Key List Info: %s Alias: %s UUID: %s"    \
+                    "\n  Key Store Name: %s Key Store UUID: %s"  \
+                    "\n  Owner: %s\n  Usage: %s Key Type: %s" \
+                    %(obj, t_alias, t_uuid, t_ksn, t_ksu, t_owner, t_usage, t_kt)
 
         print(tmpStr)
 
-        t_srcObjID      = t_srcKeyList[obj]['uuid']
-        t_srcObjAlias   = t_srcKeyList[obj]['alias']
+        t_srcObjID      = t_srcKeyList[obj][GKLMAttributeType.UUID.value]
+        t_srcObjAlias   = t_srcKeyList[obj][GKLMAttributeType.ALIAS.value]
         
         t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjects, t_srcObjID)
         t_srcHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_srcAuthStr}
-
+        
         # Note that REST Command does not require a body object in this GET REST Command
         # Also, only process SYMMETRIC_KEYS
             
         if (t_kt == ObjectType.SYMMETRIC_KEY.name and len(t_owner) > 1):
+        # if (t_kt == ObjectType.SYMMETRIC_KEY.name):
             r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
             if(r.status_code != STATUS_CODE_OK):
                 kPrintError("getSrcKeyObjDataList", r)
@@ -213,8 +223,14 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
                 t_data   = r.json()['managedObject']
                 t_srcKeyObjDataList.append(t_data)     # Add data to list
 
-                # print("Src Key ObjData", obj, " Alias: ", t_srcKeyObjData[obj]['alias'], " UUID: ", t_srcKeyObjData[obj]['uuid'])
-                print("Src Key ObjData", t_cnt, " Alias: ", t_srcKeyObjDataList[t_cnt]['uuid'], "\n-> List Size: ", len(t_srcKeyObjDataList))
+                # print("Src Key ObjData", obj, " Alias: ", t_srcKeyObjData[obj][GKLMAttributeType.ALIAS.value], " UUID: ", t_srcKeyObjData[obj][GKLMAttributeType.UUID.value])
+                tmpstr =    "\n   Src Key ObjData: %s Alias: %s"     \
+                            "\n   Key Block: %s"                     \
+                            "\n   --> OBJECT ADDED - List Size: %s"  \
+                            %(t_cnt, t_srcKeyObjDataList[t_cnt][GKLMAttributeType.UUID.value], t_srcKeyObjDataList[t_cnt][GKLMAttributeType.KEY_BLOCK.value], len(t_srcKeyObjDataList))
+                            
+                print(tmpstr)
+
                 t_cnt += 1
                 
         else:
@@ -252,7 +268,6 @@ def createDstAuthStr(t_dstHost, t_dstPort, t_dstUser, t_dstPass):
 
     # Extract the Bearer Token from the value of the key-value pair of the JSON reponse which is identified by the 'jwt' key.
     t_dstUserBearerToken            = r.json()['jwt']
-    # t_dstUserBearerTokenDuration    = r.json()['duration']
     t_dstAuthStr                    = "Bearer "+t_dstUserBearerToken
 
     return t_dstAuthStr
@@ -330,12 +345,13 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
     t_dstObjData            = [] # created list to be returned later
     
     t_ListLen               = len(t_dstObjList)
+    
     for obj in range(t_ListLen):
-        dstObjID = dstObjList[obj]['id']
+        dstObjID = t_dstObjList[obj]['id']
 
         # If the object is not exportable, then an error code will be returned.  So, check for exportability prior to
         # attempting to export the key material from the DESTINATION.
-        if dstObjList[obj]['unexportable']==True:
+        if t_dstObjList[obj]['unexportable']==True:
             tmpStr ="  UNEXPORTABLE! Dst Obj: %s ObjID: %s" %(obj, dstObjID)
             print(tmpStr)
             continue
