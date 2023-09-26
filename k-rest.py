@@ -17,6 +17,7 @@ import  hashlib
 #from    urllib3.exceptions import InsecureRequestWarning
 from    kerrors import *
 from    krestcmds import *
+from    krestenums import CryptographicUsageMask
 
 # ---------------- Constants ----------------------------------------------------
 DEFAULT_SRC_PORT    = ["9443"]
@@ -108,16 +109,47 @@ print("\n --- SRC KEY OBJECT REST EXPORT COMPLETE --- \n")
 xKeyObj     = {}
 xKeyObjList = []
 
+# -------------- MAPPING ------------------------------------------------------------------------ 
+# For each key object in the source, map it with the proper dictionary keys to a x-formed list of 
+# dictionaries for later upload to the destination
+# -----------------------------------------------------------------------------------------------
+
 for k in range(srcKeyObjCnt):
-    xKeyObj[CMAttributeType.UUID.value] = srcKeyObjDataList[k][GKLMAttributeType.UUID.value]
+    xKeyObj[CMAttributeType.UUID.value]         = srcKeyObjDataList[k][GKLMAttributeType.UUID.value]
+    
+    # GKLM stores the Key Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
+    # The GKLM Key Usage Mask string must be replaced with the appropriate value before storing it in CM.
+    srcUM       = srcKeyObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value]
+    srcUMClean  = "".join(srcUM.split())    #trim leading and trailing spaces from srcUM string
+    for tmpUM in CryptographicUsageMask:        
+        if srcUMClean == tmpUM.name:
+            print(srcUMClean, tmpUM.name, tmpUM.value)
+            xKeyObj[CMAttributeType.USAGE_MASK.value]   = tmpUM.value
+    
+    # the GKLM Alias seems to match the patter of the CM Name key.  However, GKLM includes brakcets ("[]") in the string
+    # and they need to be removed before copying the true alias value to CM
+    tmpStr = srcKeyObjDataList[k][GKLMAttributeType.ALIAS.value]
+    xKeyObj[CMAttributeType.NAME.value]         = tmpStr.strip("[]")
+    
+    xKeyObj[CMAttributeType.STATE.value]        = srcKeyObjDataList[k][GKLMAttributeType.KEY_STATE.value]
+    xKeyObj[CMAttributeType.ALGORITHM.value]    = srcKeyObjDataList[k][GKLMAttributeType.KEY_ALGORITHM.value]
+    xKeyObj[CMAttributeType.SIZE.value]         = int(srcKeyObjDataList[k][GKLMAttributeType.KEY_LENGTH.value])
+    xKeyObj[CMAttributeType.OBJECT_TYPE.value]  = srcKeyObjDataList[k][GKLMAttributeType.KEY_TYPE.value]
+    xKeyObj[CMAttributeType.MATERIAL.value]     = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
+    xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
+    
     xKeyObjList.append(xKeyObj)
     print("\n Key Obj: ", json.dumps(xKeyObj, skipkeys = True, allow_nan = True, indent = 3))
 
-exit()
 
 # Get Destination Authorization Token/String
 dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
 print("\nDAS: ", dstAuthStr)
+
+for xKeyObj in xKeyObjList:
+    success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, xKeyObj)
+    print("\n xKeyObj: ",  xKeyObj[CMAttributeType.NAME.value])
+    print("\n importDstDataOjbect Success:", success)
 
 dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
 print("\nNumber of Dst List Objects: ", len(dstObjList))
@@ -131,10 +163,6 @@ print("\n\n --- Dst REST COMPLETE --- \n")
 
 exit() # Temporarily Stop here.  Lets see if we can properly read before we write.
 
-success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, srcObjData[0])
-print("\n importDstDataOjbect Success:", success)
-
-# Next STEPS:  Map Object Dictionary keys between Src an Destination and they copy over.
 
 print("\n ---- COMPLETE ---- ")
 #####################################################################################

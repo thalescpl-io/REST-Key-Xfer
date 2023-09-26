@@ -29,12 +29,40 @@ class ObjectTypeName(enum.Enum):
     PGP_KEY             = 'PGP_KEY'
     CERTIFICATE_REQUEST = 'CERTIFICATE_REQUEST'
     
+class CryptographicUsageMask(enum.Enum):
+    # KMIP 1.0
+    SIGN                = 0x00000001
+    VERIFY              = 0x00000002
+    ENCRYPT             = 0x00000004
+    DECRYPT             = 0x00000008
+    WRAP_KEY            = 0x00000010
+    UNWRAP_KEY          = 0x00000020
+    EXPORT              = 0x00000040
+    MAC_GENERATE        = 0x00000080
+    MAC_VERIFY          = 0x00000100
+    DERIVE_KEY          = 0x00000200
+    CONTENT_COMMITMENT  = 0x00000400
+    KEY_AGREEMENT       = 0x00000800
+    CERTIFICATE_SIGN    = 0x00001000
+    CRL_SIGN            = 0x00002000
+    GENERATE_CRYPTOGRAM = 0x00004000  # Designated '(Reserved)' in KMIP 2.0
+    VALIDATE_CRYPTOGRAM = 0x00008000  # Designated '(Reserved)' in KMIP 2.0
+    TRANSLATE_ENCRYPT   = 0x00010000  # Designated '(Reserved)' in KMIP 2.0
+    TRANSLATE_DECRYPT   = 0x00020000  # Designated '(Reserved)' in KMIP 2.0
+    TRANSLATE_WRAP      = 0x00040000  # Designated '(Reserved)' in KMIP 2.0
+    TRANSLATE_UNWRAP    = 0x00080000  # Designated '(Reserved)' in KMIP 2.0
+    # KMIP 2.0
+    AUTHENTICATE        = 0x00100000
+    UNRESTRICTED        = 0x00200000
+    FPE_ENCRYPT         = 0x00400000
+    FPE_DECRYPT         = 0x00800000    
+    
 class GKLMAttributeType(enum.Enum):
     UUID                        = 'uuid'
     INFORMATION                 = 'information'
     ALIAS                       = 'alias'
     KEY_ALGORITHM               = 'key algorithm'
-    KEY_LENGH                   = 'key length (in bits)'
+    KEY_LENGTH                  = 'key length (in bits)'
     KEY_TYPE                    = 'key type'
     OWNER                       = 'owner'
     KEY_STORE_NAME              = 'key store name'
