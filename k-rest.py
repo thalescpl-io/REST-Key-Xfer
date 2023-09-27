@@ -99,10 +99,7 @@ print("\nNumber of Src List Keys: ", len(srcKeyList))
 
 srcKeyObjDataList   = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr)
 srcKeyObjCnt        = len(srcKeyObjDataList)
-print("\nLength of Src Key Objects: ",srcKeyObjCnt)
-print("\nSrc Obj Data List: ", json.dumps(srcKeyObjDataList[1], skipkeys = True, allow_nan = True, indent = 3))
-
-
+print("\nSrc Key Object Count: ",srcKeyObjCnt)
 print("\n --- SRC KEY OBJECT REST EXPORT COMPLETE --- \n")
 
 #  Map GKLM keys and values to CM
@@ -113,9 +110,8 @@ xKeyObjList = []
 # For each key object in the source, map it with the proper dictionary keys to a x-formed list of 
 # dictionaries for later upload to the destination
 # -----------------------------------------------------------------------------------------------
-
 for k in range(srcKeyObjCnt):
-    xKeyObj[CMAttributeType.UUID.value]         = srcKeyObjDataList[k][GKLMAttributeType.UUID.value]
+    # xKeyObj[CMAttributeType.UUID.value]         = srcKeyObjDataList[k][GKLMAttributeType.UUID.value]
     
     # GKLM stores the Key Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
     # The GKLM Key Usage Mask string must be replaced with the appropriate value before storing it in CM.
@@ -123,47 +119,57 @@ for k in range(srcKeyObjCnt):
     srcUMClean  = "".join(srcUM.split())    #trim leading and trailing spaces from srcUM string
     for tmpUM in CryptographicUsageMask:        
         if srcUMClean == tmpUM.name:
-            print(srcUMClean, tmpUM.name, tmpUM.value)
             xKeyObj[CMAttributeType.USAGE_MASK.value]   = tmpUM.value
     
-    # the GKLM Alias seems to match the patter of the CM Name key.  However, GKLM includes brakcets ("[]") in the string
+    # The GKLM Alias seems to match the patter of the CM Name key.  However, GKLM includes brakcets ("[]") in the string
     # and they need to be removed before copying the true alias value to CM
     tmpStr = srcKeyObjDataList[k][GKLMAttributeType.ALIAS.value]
     xKeyObj[CMAttributeType.NAME.value]         = tmpStr.strip("[]")
-    
-    xKeyObj[CMAttributeType.STATE.value]        = srcKeyObjDataList[k][GKLMAttributeType.KEY_STATE.value]
+        
+    # xKeyObj[CMAttributeType.STATE.value]        = srcKeyObjDataList[k][GKLMAttributeType.KEY_STATE.value]
     xKeyObj[CMAttributeType.ALGORITHM.value]    = srcKeyObjDataList[k][GKLMAttributeType.KEY_ALGORITHM.value]
     xKeyObj[CMAttributeType.SIZE.value]         = int(srcKeyObjDataList[k][GKLMAttributeType.KEY_LENGTH.value])
-    xKeyObj[CMAttributeType.OBJECT_TYPE.value]  = srcKeyObjDataList[k][GKLMAttributeType.KEY_TYPE.value]
+    
+    # In GKLM, the Object Type uses underscores intead of spaces ("SYMMETRIC_KEY" vs "Symmetric Key")
+    # and, therefore, needs some adjusting before it can be sent to CM.
+    tmpStr  = srcKeyObjDataList[k][GKLMAttributeType.KEY_TYPE.value]
+    tmpStr2 = tmpStr.replace("_", " ")  # SYMMETRIC_KEY -> SYMMETRIC KEY
+    xKeyObj[CMAttributeType.OBJECT_TYPE.value]  = tmpStr2.title()   # SYMMETRIC KEY -> Symmetric Key
+    
     xKeyObj[CMAttributeType.MATERIAL.value]     = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
     xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
     
-    xKeyObjList.append(xKeyObj)
-    print("\n Key Obj: ", json.dumps(xKeyObj, skipkeys = True, allow_nan = True, indent = 3))
-
+    
+    # After assembling the key object, append it to the list of other key objects
+    xKeyObjList.append(xKeyObj.copy())
+    # print("\n Key Obj: ", json.dumps(xKeyObj, skipkeys = True, allow_nan = True, indent = 3))
 
 # Get Destination Authorization Token/String
 dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
-print("\nDAS: ", dstAuthStr)
 
+# Upload all of the key objects to the destination.  Errors are thrown if the key already exists.
+print("\nImporting key material into destination...\n")
 for xKeyObj in xKeyObjList:
+    print("\n xKeyObj: ",  xKeyObj[CMAttributeType.NAME.value])    
     success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, xKeyObj)
-    print("\n xKeyObj: ",  xKeyObj[CMAttributeType.NAME.value])
     print("\n importDstDataOjbect Success:", success)
 
+print("\nRetrieving list of objects from destination")
 dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
-print("\nNumber of Dst List Objects: ", len(dstObjList))
+print("\nDst List Object Count: ", len(dstObjList))
 
 dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
-print("\nNumber of Dst Exportable Data Objects: ", len(dstObjData))
-print("\nDst Data Object:", json.dumps(dstObjData[6], skipkeys = True, allow_nan = True, indent = 3))
-print("\n Dst Data Object Type: ", type(dstObjData[6]))
+dstExpObjCnt    = len(dstObjData)
+print("\n------------------------------------------------------")
+print("\nDst Exportable Data Object Count: ", dstExpObjCnt)
+
+for obj in range(dstExpObjCnt):
+    tmpStr = "Dst Obj %s State: %s Name: %s " %(obj, dstObjData[obj][CMAttributeType.STATE.value], dstObjData[obj][CMAttributeType.NAME.value])
+    print(tmpStr)
+    
+# print("\nDst Data Object:", json.dumps(dstObjData, skipkeys = True, allow_nan = True, indent = 3))
 
 print("\n\n --- Dst REST COMPLETE --- \n")
 
-exit() # Temporarily Stop here.  Lets see if we can properly read before we write.
-
-
-print("\n ---- COMPLETE ---- ")
 #####################################################################################
 #

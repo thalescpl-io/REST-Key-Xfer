@@ -15,6 +15,8 @@ import  enum
 
 # ---------------- CONSTANTS -----------------------------------------------------
 STATUS_CODE_OK      = 200
+STATUS_CODE_CREATED = 201
+
 HTTPS_PORT_VALUE    = 443
 
 SRC_REST_PREAMBLE   = "/SKLM/rest/v1/"
@@ -223,15 +225,8 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
                 t_data   = r.json()['managedObject']
                 t_srcKeyObjDataList.append(t_data)     # Add data to list
 
-                # print("Src Key ObjData", obj, " Alias: ", t_srcKeyObjData[obj][GKLMAttributeType.ALIAS.value], " UUID: ", t_srcKeyObjData[obj][GKLMAttributeType.UUID.value])
-                tmpstr =    "\n   Src Key ObjData: %s Alias: %s"     \
-                            "\n   Key Block: %s"                     \
-                            "\n   --> OBJECT ADDED - List Size: %s"  \
-                            %(t_cnt, t_srcKeyObjDataList[t_cnt][GKLMAttributeType.UUID.value], t_srcKeyObjDataList[t_cnt][GKLMAttributeType.KEY_BLOCK.value], len(t_srcKeyObjDataList))
-                            
-                print(tmpstr)
-
-                t_cnt += 1
+                print("\n   --> OBJECT ADDED - List Size: ", len(t_srcKeyObjDataList))
+                t_cnt += 1  # increment object count
                 
         else:
             print("     *** SKIPPED - Wrong Key Type or No Owner")
@@ -251,9 +246,6 @@ def createDstAuthStr(t_dstHost, t_dstPort, t_dstUser, t_dstPass):
 
     t_dstHeaders            = {"Content-Type":"application/json"}
     t_dstBody               = {"name":t_dstUser, "password":t_dstPass}
-
-    # DEBUG
-    # print("\n d_dstHostRESTCmd: ", t_dstHostRESTCmd)
 
     # Suppress SSL Verification Warnings
     requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
@@ -312,7 +304,7 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
     t_dstObjData            = [] # created list to be returned later
         
     for obj in range(t_ListLen):
-        t_dstObjID = t_dstObjList[obj]['id']
+        t_dstObjID = t_dstObjList[obj][CMAttributeType.ID.value]
         t_dstHostRESTCmd = "https://%s:%s%s/%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList, t_dstObjID)
         t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthStr}
 
@@ -326,7 +318,7 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
         t_data      = r.json()
         t_dstObjData.append(t_data)     # Add data to list
         
-        print("Dst Object ", obj, " ID:", t_dstObjData[obj]['id'])
+        print("Dst Object ", obj, " ID:", t_dstObjData[obj][CMAttributeType.NAME.value])
 
     return t_dstObjData
 
@@ -343,16 +335,17 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
     t_dstRESTKeyExportFlag  = "export"
     
     t_dstObjData            = [] # created list to be returned later
-    
+    t_ObjCnt                = 0  # Initialize counter
     t_ListLen               = len(t_dstObjList)
     
     for obj in range(t_ListLen):
-        dstObjID = t_dstObjList[obj]['id']
+        dstObjID    = t_dstObjList[obj][CMAttributeType.ID.value]
+        dstObjName  = t_dstObjList[obj][CMAttributeType.NAME.value]
 
         # If the object is not exportable, then an error code will be returned.  So, check for exportability prior to
         # attempting to export the key material from the DESTINATION.
-        if t_dstObjList[obj]['unexportable']==True:
-            tmpStr ="  UNEXPORTABLE! Dst Obj: %s ObjID: %s" %(obj, dstObjID)
+        if t_dstObjList[obj][CMAttributeType.UNEXPORTABLE.value]==True:
+            tmpStr ="Dst Obj: %s Name: %s *UNEXPORTABLE*" %(obj, dstObjName)
             print(tmpStr)
             continue
 
@@ -368,71 +361,41 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 
         t_data      = r.json()        
         t_dstObjData.append(t_data)  #Add data to te list
+        
+        tmpStr ="Dst Obj: %s Name: %s " %(obj, dstObjName)
+        print(tmpStr)
+        
+        t_ObjCnt += 1
 
-        print("Dst Object ", obj, " ID:", t_dstObjData[obj]['id'])
-    
     return t_dstObjData
 
-
 # -----------------------------------------------------------------------------
+# REST Assembly for IMPORTING specific Object Data into DESTINATION HOST
 # REST Assembly for IMPORTING specific Object Data into DESTINATION HOST
 #
 # Using the VAULT/KEYS2 API, this code writes adds individual keys to the desitation.
 # This routine needs to be called for EACH key that needs to be written.
+#
+# Note that an ERROR will occur if a key of the same name already exists in the 
+# destination.
 # -----------------------------------------------------------------------------
-def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_srcObj):
+def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_xKeyObj):
     t_success = True
     
     t_dstRESTKeyCreate        = DST_REST_PREAMBLE + "vault/keys2"
 
-    # define object
-    # populate objet - src-dst mapping
-
-    t_dstObj = {}   # create a dicionary to submit
-    
-    t_dstObj['name']        = "My First Key"
-    t_dstObj['usageMask']   = 76    # Uses?
-    t_dstObj['algorithm']   = "aes"
-    t_dstObj['meta']        = {"ownerId": "local|e923406f-5a62-4d6e-972b-8f6866164a07"}
-    t_dstObj['state']       = "Active"  # states?
-    t_dstObj['material']    = 'cc1581e80414a258693bcb823ef76d378f7dfee8839bc6ed58fa6d303c908324'
-    t_dstObj['format']      = 'raw'
-    
-#{
-#  "name": "My Encryption Key",
-#  "usageMask": 12,
-#  "algorithm": "aes",
-#  "meta": {
-#    "ownerId": "local|1a45d..."
-#  },
-#  "state": "Pre-Active",
-#  "deactivationDate": "2018-10-02T14:24:37.436073Z",
-#  "protectStopDate": "2018-10-02T14:24:37.436073Z",
-#  "aliases": [
-#    {
-#      "alias": "altname1",
-#      "type": "string"
-#    },
-#    {
-#      "alias": "altname2:keysecure:gemalto:com",
-#      "type": "uri"
-#    }
-#  ]
-#}
-    
     t_dstHostRESTCmd = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyCreate)
     t_dstHeaders = {"Content-Type":"application/json", "Accept":"application/json", "Authorization":t_dstAuthStr}
 
     # Note that REST Command does not require a body object in this GET REST Command
-    r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_dstObj), headers=t_dstHeaders, verify=False)
-    if(r.status_code != STATUS_CODE_OK):
-        kPrintError("importDstDataObject", r)        
-        success = False
-    else:
-    
+    r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_xKeyObj), headers=t_dstHeaders, verify=False)
+
+    if(r.status_code == STATUS_CODE_CREATED):
         t_Response      = r.json()        
+        print("Created Object: ", t_Response)
+    else:
+        kPrintError("importDstDataObject", r)        
+        t_success = False
         
-        print("Created Object: ", t_response)
-    
     return t_success
 

@@ -1,3 +1,4 @@
+ECHO OFF
 REM
 REM k-rest.py REST Client Data Transfer
 REM

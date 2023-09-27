@@ -5,7 +5,6 @@
 # 	Purpose:  Error routines to support k-rest.py
 #                      
 #####################################################################################
-
 import json
 
 def kPrintError(t_str, t_r):
@@ -15,7 +14,8 @@ def kPrintError(t_str, t_r):
 # -----------------------------------------------------------------------------
     t_str_sc    = str(t_r.status_code)
     t_str_r     = str(t_r.reason)
-    t_str_e     = str(t_r.json()['error'])
+    # t_str_e     = str(t_r.json()['error'])
+    t_str_e     = str(t_r.json())
     
     tmpstr      = "  --> %s Status Code: %s\n   Reason: %s\n   Error: %s" %(t_str, t_str_sc, t_str_r, t_str_e)
     
