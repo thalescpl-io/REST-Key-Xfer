@@ -392,7 +392,7 @@ def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_xKeyObj
 
     if(r.status_code == STATUS_CODE_CREATED):
         t_Response      = r.json()        
-        print("Created Object: ", t_Response)
+        print("  ->Object Created: ", t_Response[CMAttributeType.NAME.value])
     else:
         kPrintError("importDstDataObject", r)        
         t_success = False
