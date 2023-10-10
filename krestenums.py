@@ -116,7 +116,7 @@ class CMAttributeType(enum.Enum):
     OBJECT_TYPE                 = 'objectType'
     ALIASES                     = 'aliases'
     SHA1_FINGERPRINT            = 'sha1Fingerprint'
-    SHAT256_FINGERPRINT         = 'sha256Fingerprint'
+    SHA256_FINGERPRINT          = 'sha256Fingerprint'
     DEFAULT_IV                  = 'defaultIV'
     VERSION                     = 'version'
     ALGORITHM                   = 'algorithm'
@@ -131,7 +131,11 @@ class CMAttributeType(enum.Enum):
     MATERIAL                    = 'material'
     FORMAT                      = 'format'
         
-
+class listOnlyOption(enum.Enum):
+    NEITHER                     = 'NEITHER'
+    SOURCE                      = 'SOURCE'
+    DESTINATION                 = 'DESTINATION'
+    BOTH                        = 'BOTH'
     
     
     
