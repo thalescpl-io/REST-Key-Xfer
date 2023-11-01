@@ -156,14 +156,14 @@ if listOnly == listOnlyOption.NEITHER.value:
 
 if listOnly != listOnlyOption.SOURCE.value:
     # Read keys that are now in the destination unless the user asks for source-only information
-    print("\nRetrieving list of objects from destination")
+    print("\nRetrieving list of objects from destination...")
     dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
     print("\nDst Object List Count: ", len(dstObjList))
     # printDstObjList(dstObjList)
     
     dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
     dstExpObjCnt    = len(dstObjData)
-    print("\nDst Exportable Data Object Count: ", dstExpObjCnt)
+    print("Dst Exportable Data Object Count: ", dstExpObjCnt)
     printDstObjData(dstObjData)
 
     print("\n\n --- Dst REST COMPLETE --- \n")
