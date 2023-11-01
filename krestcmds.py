@@ -12,6 +12,7 @@ from    krestenums import ObjectType, GKLMAttributeType
 from    krestenums import CMAttributeType
 
 import  enum
+import  re
 
 # ---------------- CONSTANTS -----------------------------------------------------
 STATUS_CODE_OK      = 200
@@ -271,6 +272,31 @@ def printSrcKeyList(t_srcKeyList):
         print(tmpStr)
     return t_success
 
+def convertGKLMHashToString(t_GKLMHash):
+# -----------------------------------------------------------------------------
+# GKLM stores the has a string that looks like:
+#  [[INDEX 0] [HASH SHA256] [VALUE xcc,x43,xd9,x72,xd8,x0f,x57,xb7,x5a,x01,xf4,x42,x16,x42,x0a,x90,x63,xf3,xf0,xd7,x46,x6a,x58,x56,x18,x4d,x04,xad,xac,xf0,x9d,x10] [DIGESTED_KEY_FORMAT RAW]]
+#
+# But this is onweildly.  This routine trims out all of the brackets, commas, x's
+# and leading and  trailing block information.
+#
+# This routine uses a couple of temporary string variables to trim down the string
+# -----------------------------------------------------------------------------
+
+    t_Header    = "[VALUE "     # string that preceeds the hash value
+    t_sizeH     = len(t_Header)
+    t_Trailer   = " [DIGESTED"  # first few characters of string at end of hash value
+    t_chars     = "[^0-9a-f]"          # only characters that need to be kept
+    
+    t_startPos  = t_GKLMHash.find(t_Header)
+    t_endPos    = t_GKLMHash.find(t_Trailer)
+    
+    tmpStr1  = t_GKLMHash[t_startPos+t_sizeH:t_endPos]
+    tmpStr2 = re.sub(t_chars, "", tmpStr1)
+        
+    return tmpStr2
+
+
 def printSrcKeyObjDataList(t_srcKeyObjDataList):
 # -----------------------------------------------------------------------------
 # Display the contents of a srcKeyObjDataList
@@ -282,19 +308,23 @@ def printSrcKeyObjDataList(t_srcKeyObjDataList):
     for obj in range(t_ListLen):
         
         # Separate string conversions before sending.  
-        # Python gets confused if they are all converted as part of the string assembly of tmpStr
+        # Python gets confused if they are all converted as part of the string assembly of tmpStr.  tmpStr.strip("[]")
         
         t_alias = str(t_srcKeyObjDataList[obj][GKLMAttributeType.ALIAS.value])
         t_uuid  = str(t_srcKeyObjDataList[obj][GKLMAttributeType.UUID.value])
         t_kt     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.KEY_TYPE.value])
         t_hv     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.DIGEST.value])
         
-        tmpStr =    "\nSrc Key Obj Data List Info: %s Alias: %s UUID: %s"    \
+        tmpStr =    "\nSrc Key Obj Data List Info: %s Alias: %s" \
+                    "\n  UUID: %s"    \
                     "\n  Key Type: %s " \
                     "\n  Hash: %s" \
-                    %(obj, t_alias, t_uuid, t_kt, t_hv)
+                    %(obj, t_alias.strip("[]"), t_uuid, t_kt, convertGKLMHashToString(t_hv))
 
         print(tmpStr)
+        
+
+        
     return t_success
 
 def createDstAuthStr(t_dstHost, t_dstPort, t_dstUser, t_dstPass):
@@ -488,7 +518,7 @@ def printDstObjList(t_dstObjList):
         tmpStr =    "\nDst Obj: %s Name: %s" \
                     "\n  UUID: %s" \
                     "\n  Key Type: %s Size: %s" \
-                    "\n  SHA256: %s" \
+                    "\n  Hash: %s" \
                     %(obj, t_name, t_uuid, t_ot, t_size, t_fp)
 
         print(tmpStr)
@@ -515,7 +545,7 @@ def printDstObjData(t_dstObjData):
         tmpStr =    "\nDst Obj: %s Name: %s" \
                     "\n  UUID: %s" \
                     "\n  Key Type: %s Size: %s" \
-                    "\n  SHA256: %s" \
+                    "\n  Hash: %s" \
                     %(obj, t_name, t_uuid, t_ot, t_size, t_fp)
 
         print(tmpStr)
