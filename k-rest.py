@@ -53,6 +53,11 @@ parser.add_argument("-listOnly", nargs=1, action="store", dest="listOnly", requi
                             ],
                     default=[listOnlyOption.NEITHER.value] )
 
+# Added ability to specify a source UUID.  If populated, then the actions 
+# specified (read or migrate) will only apply to the particular UUID
+parser.add_argument("-srcuuid", nargs=1, action="store", dest="srcUuid", required=False)
+srcUUID = ""   #set default to a zero length string
+
 # Args are returned as a LIST.  Separate them into individual strings
 args = parser.parse_args()
 
@@ -73,6 +78,9 @@ print("  Src: ", srcHost, srcPort, srcUser)
 print(" Dest: ", dstHost, dstPort, dstUser)
 print(" ListOnly:", listOnly)
 
+if args.srcUuid is not None:
+    srcUUID = str(" ".join(args.srcUuid))
+    print(" UUID:", srcUUID)
 
 # ---- Parsing Complete ----------------------------------------------------------
 
@@ -87,20 +95,21 @@ dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
 # Get list of keys
 srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
 srcKeyListCnt   = len(srcKeyList)
+
 # Get detailed information, including key material, for each key/object.
 # The returned list is a COMPLETE package of key attributes and key material for
 # each object.
-
-srcKeyObjDataList   = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr)
+#
+# Note that we have now added the ability to specify a UUID.
+srcKeyObjDataList   = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr, srcUUID)
 srcKeyObjCnt        = len(srcKeyObjDataList)
 
 if listOnly != listOnlyOption.DESTINATION.value:
     print("\nNumber of Src List Keys: ", srcKeyListCnt)
-    #printSrcKeyList(srcKeyList)
     print("Number of transferrable Src Key Objects: ", srcKeyObjCnt)
     printSrcKeyObjDataList(srcKeyObjDataList)
 
-    print("\n --- SRC KEY OBJECT REST EXPORT COMPLETE --- \n")
+    print("\n --- SRC KEY OBJECT RETRIEVAL COMPLETE --- \n")
 
 if listOnly == listOnlyOption.NEITHER.value:
 # Create and upload all of the key objects to the destination unless a flag to LIST ONLY has been specified.  
@@ -159,14 +168,13 @@ if listOnly != listOnlyOption.SOURCE.value:
     print("\nRetrieving list of objects from destination...")
     dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
     print("\nDst Object List Count: ", len(dstObjList))
-    # printDstObjList(dstObjList)
     
     dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
     dstExpObjCnt    = len(dstObjData)
     print("Dst Exportable Data Object Count: ", dstExpObjCnt)
     printDstObjData(dstObjData)
 
-    print("\n\n --- Dst REST COMPLETE --- \n")
+    print("\n\n --- DST OBJECT RETRIEVAL COMPLETE --- \n")
 
 #####################################################################################
 #

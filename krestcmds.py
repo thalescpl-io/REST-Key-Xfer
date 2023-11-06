@@ -181,7 +181,7 @@ def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
         
     return t_srcKeyDataList
 
-def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
+def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr, t_suuid):
 # -----------------------------------------------------------------------------
 # REST Assembly for reading specific Key Data via OBJECT
 #
@@ -200,47 +200,33 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
         
         # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr
         
-#        t_alias = str(t_srcKeyList[obj][GKLMAttributeType.ALIAS.value])
-#        t_uuid  = str(t_srcKeyList[obj][GKLMAttributeType.UUID.value])
-#        t_ksn   = str(t_srcKeyList[obj][GKLMAttributeType.KEY_STORE_NAME.value])
-#        t_ksu   = str(t_srcKeyList[obj][GKLMAttributeType.KEY_STORE_UUID.value])
-        t_owner = str(t_srcKeyList[obj][GKLMAttributeType.OWNER.value])
-#        t_usage = str(t_srcKeyList[obj][GKLMAttributeType.USAGE.value])
-        t_kt    = str(t_srcKeyList[obj][GKLMAttributeType.KEY_TYPE.value])
-#        
-#        tmpStr =    "\nSrc Key List Info: %s Alias: %s UUID: %s"    \
-#                    "\n  Key Store Name: %s Key Store UUID: %s"  \
-#                    "\n  Owner: %s\n  Usage: %s Key Type: %s" \
-#                    %(obj, t_alias, t_uuid, t_ksn, t_ksu, t_owner, t_usage, t_kt)
-
-#        print(tmpStr)
-
+        t_owner         = str(t_srcKeyList[obj][GKLMAttributeType.OWNER.value])
+        t_kt            = str(t_srcKeyList[obj][GKLMAttributeType.KEY_TYPE.value])
         t_srcObjID      = t_srcKeyList[obj][GKLMAttributeType.UUID.value]
         t_srcObjAlias   = t_srcKeyList[obj][GKLMAttributeType.ALIAS.value]
         
         t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjects, t_srcObjID)
-        t_srcHeaders = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
+        t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
         
         # Note that REST Command does not require a body object in this GET REST Command
         # Also, only process SYMMETRIC_KEYS
             
-        if (t_kt == ObjectType.SYMMETRIC_KEY.name and len(t_owner) > 1):
-        # if (t_kt == ObjectType.SYMMETRIC_KEY.name):
+        if (t_kt == ObjectType.SYMMETRIC_KEY.name and len(t_owner) > 1):        
             r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
             if(r.status_code != STATUS_CODE_OK):
                 kPrintError("getSrcKeyObjDataList", r)
                 continue
 
-            else:
+            elif len(t_suuid) == 0: # add data unless a specific UUID is specified
                 t_data   = r.json()['managedObject']
                 t_srcKeyObjDataList.append(t_data)     # Add data to list
-
-                # print("\n   --> OBJECT ADDED - List Size: ", len(t_srcKeyObjDataList))
                 t_cnt += 1  # increment object count
                 
-#        else:
-#            print("     *** SKIPPED - Wrong Key Type or No Owner")
-        
+            elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
+                t_data   = r.json()['managedObject']
+                t_srcKeyObjDataList.append(t_data)     # Add data to list
+                t_cnt += 1  # increment object count
+    
     return t_srcKeyObjDataList
 
 def printSrcKeyList(t_srcKeyList):
@@ -321,9 +307,7 @@ def printSrcKeyObjDataList(t_srcKeyObjDataList):
                     "\n  Hash: %s" \
                     %(obj, t_alias.strip("[]"), t_uuid, t_kt, convertGKLMHashToString(t_hv))
 
-        print(tmpStr)
-        
-
+        print(tmpStr)            
         
     return t_success
 
