@@ -397,8 +397,6 @@ def getDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
         t_data      = r.json()
         t_dstObjData.append(t_data)     # Add data to list
         
-        # print("Dst Object ", obj, " ID:", t_dstObjData[obj][CMAttributeType.NAME.value])
-
     return t_dstObjData
 
 def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
@@ -491,19 +489,30 @@ def printDstObjList(t_dstObjList):
     
     for obj in range(t_ListLen):
         
-        # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr
+        # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr.
+        # Error checking added in case an attribute is missing (may happen with opaque objects)
         
-        t_name  = str(t_dstObjList[obj][CMAttributeType.NAME.value])
-        t_uuid  = str(t_dstObjList[obj][CMAttributeType.UUID.value])
-        t_ot    = str(t_dstObjList[obj][CMAttributeType.OBJECT_TYPE.value])
-        t_size  = str(t_dstObjList[obj][CMAttributeType.SIZE.value])
-        t_fp    = str(t_dstObjList[obj][CMAttributeType.SHA256_FINGERPRINT.value])
+        try:
+            t_name  = str(t_dstObjList[obj][CMAttributeType.NAME.value])
+            t_uuid  = str(t_dstObjList[obj][CMAttributeType.UUID.value])
+            t_ot    = str(t_dstObjList[obj][CMAttributeType.OBJECT_TYPE.value])
+            t_fp    = str(t_dstObjList[obj][CMAttributeType.SHA256_FINGERPRINT.value])
         
-        tmpStr =    "\nDst Obj: %s Name: %s" \
-                    "\n  UUID: %s" \
-                    "\n  Key Type: %s Size: %s" \
-                    "\n  Hash: %s" \
-                    %(obj, t_name, t_uuid, t_ot, t_size, t_fp)
+            tmpStr =    "\nDst Obj: %s Name: %s" \
+            "\n  UUID: %s" \
+            "\n  Key Type: %s" \
+            "\n  Hash: %s" \
+            %(obj, t_name, t_uuid, t_ot, t_fp)
+            
+        except Exception as e:
+            tmpStr =    "\nDst Obj: %s Name: %s" \
+            "\n  UUID: %s" \
+            "\n  Key Type: %s" \
+            %(obj, t_name, t_uuid, t_ot)
+            # "\n  Dst object attribute missing (printDstObjData): %s" \
+            # %(obj, t_name, t_uuid, t_ot, e)
+            # %( e, json.dumps(t_dstObjData[obj], indent=4) )       
+
 
         print(tmpStr)
     return t_success
@@ -519,18 +528,28 @@ def printDstObjData(t_dstObjData):
     for obj in range(t_ListLen):
         
         # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr
+        # Error checking added in case an attribute is missing (may happen with opaque objects)
         
-        t_name  = str(t_dstObjData[obj][CMAttributeType.NAME.value])
-        t_uuid  = str(t_dstObjData[obj][CMAttributeType.UUID.value])
-        t_ot    = str(t_dstObjData[obj][CMAttributeType.OBJECT_TYPE.value])
-        t_size  = str(t_dstObjData[obj][CMAttributeType.SIZE.value])
-        t_fp    = str(t_dstObjData[obj][CMAttributeType.SHA256_FINGERPRINT.value])
-        
-        tmpStr =    "\nDst Obj: %s Name: %s" \
-                    "\n  UUID: %s" \
-                    "\n  Key Type: %s Size: %s" \
-                    "\n  Hash: %s" \
-                    %(obj, t_name, t_uuid, t_ot, t_size, t_fp)
+        try:
+            t_name  = str(t_dstObjData[obj][CMAttributeType.NAME.value])
+            t_uuid  = str(t_dstObjData[obj][CMAttributeType.UUID.value])
+            t_ot    = str(t_dstObjData[obj][CMAttributeType.OBJECT_TYPE.value])
+            t_fp    = str(t_dstObjData[obj][CMAttributeType.SHA256_FINGERPRINT.value])
+
+            tmpStr =    "\nDst Obj: %s Name: %s" \
+            "\n  UUID: %s" \
+            "\n  Key Type: %s" \
+            "\n  Hash: %s" \
+            %(obj, t_name, t_uuid, t_ot, t_fp)
+                    
+        except Exception as e:
+            tmpStr =    "\nDst Obj: %s Name: %s" \
+            "\n  UUID: %s" \
+            "\n  Key Type: %s" \
+            %(obj, t_name, t_uuid, t_ot)
+            # "\n  Dst object attribute missing (printDstObjData): %s" \
+            # %(obj, t_name, t_uuid, t_ot, e)
+            # %( e, json.dumps(t_dstObjData[obj], indent=4) )
 
         print(tmpStr)
     return t_success
