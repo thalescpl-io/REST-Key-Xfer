@@ -106,7 +106,7 @@ srcKeyObjCnt        = len(srcKeyObjDataList)
 
 if listOnly != listOnlyOption.DESTINATION.value:
     print("\nNumber of Src List Keys: ", srcKeyListCnt)
-    print("Number of transferrable Src Key Objects: ", srcKeyObjCnt)
+    print("Number of exportable Src Key Objects: ", srcKeyObjCnt)
     printSrcKeyObjDataList(srcKeyObjDataList)
 
     print("\n --- SRC KEY OBJECT RETRIEVAL COMPLETE --- \n")
