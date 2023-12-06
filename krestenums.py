@@ -130,6 +130,13 @@ class CMAttributeType(enum.Enum):
     MUID                        = 'muid'
     MATERIAL                    = 'material'
     FORMAT                      = 'format'
+    OWNER_ID                    = 'ownerId'
+    
+class CMUserAttribute(enum.Enum):    
+    NAME                        = 'name'
+    NICKNAME                    = 'nickname'
+    USER_ID                     = 'user_id'
+
         
 class listOnlyOption(enum.Enum):
     NEITHER                     = 'NEITHER'

@@ -526,8 +526,10 @@ def printDstObjData(t_dstObjData):
     t_ListLen           = len(t_dstObjData)
 
     for obj in range(t_ListLen):
-        
-        # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr
+        t_meta              = ""
+        t_OID               = ""        
+        # Separate string conversions before sending.  Python gets confused if 
+        # they are all converted as part of the string assembly of tmpStr.
         # Error checking added in case an attribute is missing (may happen with opaque objects)
         
         try:
@@ -535,12 +537,24 @@ def printDstObjData(t_dstObjData):
             t_uuid  = str(t_dstObjData[obj][CMAttributeType.UUID.value])
             t_ot    = str(t_dstObjData[obj][CMAttributeType.OBJECT_TYPE.value])
             t_fp    = str(t_dstObjData[obj][CMAttributeType.SHA256_FINGERPRINT.value])
+            t_meta  = str(t_dstObjData[obj][CMAttributeType.META.value])
+            t_oID   = str(t_dstObjData[obj][CMAttributeType.META.value][CMAttributeType.OWNER_ID.value])
+            
+            if(len(t_meta) < 1):
+                t_meta = "<none>"
+                
+            if(len(t_oID) < 1):
+                t_oID = "<none>"
 
             tmpStr =    "\nDst Obj: %s Name: %s" \
             "\n  UUID: %s" \
             "\n  Key Type: %s" \
             "\n  Hash: %s" \
-            %(obj, t_name, t_uuid, t_ot, t_fp)
+            "\n  OwnerID: %s" \
+            %(obj, t_name, t_uuid, t_ot, t_fp, t_oID)
+            
+            # tmpStr2 = "\n  JSON: %s" %(json.dumps(t_dstObjData[obj]))
+            # print(tmpStr2)
                     
         except Exception as e:
             tmpStr =    "\nDst Obj: %s Name: %s" \
@@ -552,4 +566,29 @@ def printDstObjData(t_dstObjData):
             # %( e, json.dumps(t_dstObjData[obj], indent=4) )
 
         print(tmpStr)
+
     return t_success
+
+def getDstUserInfo(t_dstHost, t_dstPort, t_dstAuthStr):
+# -----------------------------------------------------------------------------
+# REST Assembly for collecting name, usernickname, and user_ID information
+#
+# Using the account that was used to authenticate to CM (hereto defined as 'self')
+# collect the various names for the user, including name, username, and user_ID
+# -----------------------------------------------------------------------------
+
+    t_dstRESTUserMgmtSelf   = DST_REST_PREAMBLE + "usermgmt/users/self" #Note that the user 'self'
+        
+    t_dstHostRESTCmd    = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTUserMgmtSelf)
+    t_dstHeaders        = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
+
+    # Note that REST Command does not require a body object in this GET REST Command
+    r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        print("getDstUserInfo:", r)
+        kPrintError("getDstUserInfo", r)
+        exit()
+
+    t_userInfo = r.json()
+    
+    return t_userInfo

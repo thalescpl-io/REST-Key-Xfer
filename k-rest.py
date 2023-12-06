@@ -19,6 +19,7 @@ from    kerrors import *
 from    krestcmds import *
 from    krestenums import CryptographicUsageMask
 from    krestenums import listOnlyOption
+from    krestenums import CMUserAttribute
 
 # ---------------- Constants ----------------------------------------------------
 DEFAULT_SRC_PORT    = ["9443"]
@@ -89,8 +90,26 @@ if args.srcUuid is not None:
 # --------------------------------------------------------------------------------
 
 # Get Source and Destination Authorization Token/Strings
+print("\n Accessing Source and Destination Hosts and collecting Authorization Strings...")
+
 srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
+print("  * Source Access Confirmed *")
+tmpStr = "    Username: %s\n" %(srcUser)
+print(tmpStr)
+
 dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
+print("  * Destination Access Confirmed *")
+
+# Get destination user meta data that will be used later for 
+dstUsrJSON = []
+dstUsrJSON = getDstUserInfo(dstHost, dstPort, dstAuthStr)
+
+CM_userName     = dstUsrJSON[CMUserAttribute.NAME.value]
+CM_userNickname = dstUsrJSON[CMUserAttribute.NICKNAME.value]
+CM_userID       = dstUsrJSON[CMUserAttribute.USER_ID.value]
+
+tmpStr = "    Username: %s\n    User: %s\n    UserID: %s\n" %(CM_userNickname, CM_userName, CM_userID)
+print(tmpStr)
 
 # Get list of keys
 srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
@@ -133,7 +152,8 @@ if listOnly == listOnlyOption.NEITHER.value:
             if srcUMClean == tmpUM.name:
                 xKeyObj[CMAttributeType.USAGE_MASK.value]   = tmpUM.value
 
-        # The GKLM Alias seems to match the patter of the CM Name key.  However, GKLM includes brakcets ("[]") in the string
+        # The GKLM Alias seems to match the patter of the CM Name key.  
+        # However, GKLM includes brakcets ("[]") in the string
         # and they need to be removed before copying the true alias value to CM
         tmpStr = srcKeyObjDataList[k][GKLMAttributeType.ALIAS.value]
         xKeyObj[CMAttributeType.NAME.value]         = tmpStr.strip("[]")
@@ -150,12 +170,16 @@ if listOnly == listOnlyOption.NEITHER.value:
 
         xKeyObj[CMAttributeType.MATERIAL.value]     = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
         xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
-
+        
+        # Add a userID to the associated key object so it can be made owner of the key
+        # when uploaded to CM
+        xKeyObj[CMAttributeType.META.value]= {CMAttributeType.OWNER_ID.value: CM_userID}
 
         # After assembling the key object, append it to the list of other key objects
         xKeyObjList.append(xKeyObj.copy())
         # print("\n Key Obj: ", json.dumps(xKeyObj, skipkeys = True, allow_nan = True, indent = 3))
 
+        
 # Errors are thrown if the key already exists.
     print("\nImporting key material into destination...\n")
     for xKeyObj in xKeyObjList:
