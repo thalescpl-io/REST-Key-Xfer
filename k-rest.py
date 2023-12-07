@@ -101,17 +101,27 @@ dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
 print("  * Destination Access Confirmed *")
 
 # Get destination user meta data that will be used later for 
-dstUsrJSON = []
-dstUsrJSON = getDstUserInfo(dstHost, dstPort, dstAuthStr)
+dstUsrSelfJSON  = getDstUserSelf(dstHost, dstPort, dstAuthStr)
 
-CM_userName     = dstUsrJSON[CMUserAttribute.NAME.value]
-CM_userNickname = dstUsrJSON[CMUserAttribute.NICKNAME.value]
-CM_userID       = dstUsrJSON[CMUserAttribute.USER_ID.value]
+CM_userName     = dstUsrSelfJSON[CMUserAttribute.NAME.value]
+CM_userNickname = dstUsrSelfJSON[CMUserAttribute.NICKNAME.value]
+CM_userID       = dstUsrSelfJSON[CMUserAttribute.USER_ID.value]
 
 tmpStr = "    Username: %s\n    User: %s\n    UserID: %s\n" %(CM_userNickname, CM_userName, CM_userID)
 print(tmpStr)
 
-# Get list of keys
+# Get a list of all users on the destination for later use and create a dictionary of user_id and nickname
+dstUsrsAllData  = getDstUsersAll(dstHost, dstPort, dstAuthStr)
+dstUsrsAllJSON  = dstUsrsAllData[CMAttributeType.RESOURCES.value]   # extract just the user data
+dstUsrsAllDict  = {} # define user dictionary - to be used later
+
+for t_idx in dstUsrsAllJSON:
+    t_user_id   = t_idx[CMUserAttribute.USER_ID.value]
+    t_nickname  = t_idx[CMUserAttribute.NICKNAME.value]
+    dstUsrsAllDict[t_user_id] = t_nickname
+    
+
+# Get list of Source Keys
 srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
 srcKeyListCnt   = len(srcKeyList)
 
@@ -196,9 +206,9 @@ if listOnly != listOnlyOption.SOURCE.value:
     dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
     dstExpObjCnt    = len(dstObjData)
     print("Dst Exportable Data Object Count: ", dstExpObjCnt)
-    printDstObjData(dstObjData)
+    printDstObjDataAndOwner(dstObjData, dstUsrsAllDict)
 
-    print("\n\n --- DST OBJECT RETRIEVAL COMPLETE --- \n")
+    print("\n --- DST OBJECT RETRIEVAL COMPLETE --- \n")
 
 #####################################################################################
 #

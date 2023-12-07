@@ -131,6 +131,7 @@ class CMAttributeType(enum.Enum):
     MATERIAL                    = 'material'
     FORMAT                      = 'format'
     OWNER_ID                    = 'ownerId'
+    RESOURCES                   = 'resources'
     
 class CMUserAttribute(enum.Enum):    
     NAME                        = 'name'

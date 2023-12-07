@@ -363,7 +363,7 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
         kPrintError("getDstObjList", r)
         exit()
 
-    t_dstObjList           = r.json()['resources']
+    t_dstObjList           = r.json()[CMAttributeType.RESOURCES.value]
 
     # print("\n         Dst Objects: ", t_dstObjList[0].keys())
     return t_dstObjList
@@ -517,7 +517,7 @@ def printDstObjList(t_dstObjList):
         print(tmpStr)
     return t_success
 
-def printDstObjData(t_dstObjData):
+def printDstObjDataAndOwner(t_dstObjData, t_UserDict):
 # -----------------------------------------------------------------------------
 # Display the contents of a dstObjData
 # -----------------------------------------------------------------------------
@@ -539,19 +539,14 @@ def printDstObjData(t_dstObjData):
             t_fp    = str(t_dstObjData[obj][CMAttributeType.SHA256_FINGERPRINT.value])
             t_meta  = str(t_dstObjData[obj][CMAttributeType.META.value])
             t_oID   = str(t_dstObjData[obj][CMAttributeType.META.value][CMAttributeType.OWNER_ID.value])
+            t_owner = t_UserDict[t_oID]
             
-            if(len(t_meta) < 1):
-                t_meta = "<none>"
-                
-            if(len(t_oID) < 1):
-                t_oID = "<none>"
-
             tmpStr =    "\nDst Obj: %s Name: %s" \
             "\n  UUID: %s" \
             "\n  Key Type: %s" \
             "\n  Hash: %s" \
-            "\n  OwnerID: %s" \
-            %(obj, t_name, t_uuid, t_ot, t_fp, t_oID)
+            "\n  OwnerID: %s (%s)" \
+            %(obj, t_name, t_uuid, t_ot, t_fp, t_oID, t_owner)
             
             # tmpStr2 = "\n  JSON: %s" %(json.dumps(t_dstObjData[obj]))
             # print(tmpStr2)
@@ -569,7 +564,7 @@ def printDstObjData(t_dstObjData):
 
     return t_success
 
-def getDstUserInfo(t_dstHost, t_dstPort, t_dstAuthStr):
+def getDstUserSelf(t_dstHost, t_dstPort, t_dstAuthStr):
 # -----------------------------------------------------------------------------
 # REST Assembly for collecting name, usernickname, and user_ID information
 #
@@ -585,8 +580,30 @@ def getDstUserInfo(t_dstHost, t_dstPort, t_dstAuthStr):
     # Note that REST Command does not require a body object in this GET REST Command
     r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
-        print("getDstUserInfo:", r)
-        kPrintError("getDstUserInfo", r)
+        print("getDstUserSelf:", r)
+        kPrintError("getDstUserSelf", r)
+        exit()
+
+    t_userInfo = r.json()
+    
+    return t_userInfo
+
+def getDstUsersAll(t_dstHost, t_dstPort, t_dstAuthStr):
+# -----------------------------------------------------------------------------
+# REST Assembly for collecting name, usernickname, and user_ID information for
+# all users on CM.
+# -----------------------------------------------------------------------------
+
+    t_dstRESTUserMgmtSelf   = DST_REST_PREAMBLE + "usermgmt/users" 
+        
+    t_dstHostRESTCmd    = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTUserMgmtSelf)
+    t_dstHeaders        = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
+
+    # Note that REST Command does not require a body object in this GET REST Command
+    r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        print("getDstUsersAll:", r)
+        kPrintError("getDstUsersAll", r)
         exit()
 
     t_userInfo = r.json()
