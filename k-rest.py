@@ -92,54 +92,55 @@ if args.srcUuid is not None:
 # Get Source and Destination Authorization Token/Strings
 print("\n Accessing Source and Destination Hosts and collecting Authorization Strings...")
 
-srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
-print("  * Source Access Confirmed *")
-tmpStr = "    Username: %s\n" %(srcUser)
-print(tmpStr)
-
-dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
-print("  * Destination Access Confirmed *")
-
-# Get destination user meta data that will be used later for 
-dstUsrSelfJSON  = getDstUserSelf(dstHost, dstPort, dstAuthStr)
-
-CM_userName     = dstUsrSelfJSON[CMUserAttribute.NAME.value]
-CM_userNickname = dstUsrSelfJSON[CMUserAttribute.NICKNAME.value]
-CM_userID       = dstUsrSelfJSON[CMUserAttribute.USER_ID.value]
-
-tmpStr = "    Username: %s\n    User: %s\n    UserID: %s\n" %(CM_userNickname, CM_userName, CM_userID)
-print(tmpStr)
-
-# Get a list of all users on the destination for later use and create a dictionary of user_id and nickname
-dstUsrsAllData  = getDstUsersAll(dstHost, dstPort, dstAuthStr)
-dstUsrsAllJSON  = dstUsrsAllData[CMAttributeType.RESOURCES.value]   # extract just the user data
-dstUsrsAllDict  = {} # define user dictionary - to be used later
-
-for t_idx in dstUsrsAllJSON:
-    t_user_id   = t_idx[CMUserAttribute.USER_ID.value]
-    t_nickname  = t_idx[CMUserAttribute.NICKNAME.value]
-    dstUsrsAllDict[t_user_id] = t_nickname
+if listOnly != listOnlyOption.DESTINATION.value:
+    srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)
+    print("  * Source Access Confirmed *")
+    tmpStr = "    Username: %s\n" %(srcUser)
+    print(tmpStr)
     
-
 # Get list of Source Keys
-srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
-srcKeyListCnt   = len(srcKeyList)
+    srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
+    srcKeyListCnt   = len(srcKeyList)
 
 # Get detailed information, including key material, for each key/object.
 # The returned list is a COMPLETE package of key attributes and key material for
 # each object.
 #
 # Note that we have now added the ability to specify a UUID.
-srcKeyObjDataList   = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr, srcUUID)
-srcKeyObjCnt        = len(srcKeyObjDataList)
+    srcKeyObjDataList   = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr, srcUUID)
+    srcKeyObjCnt        = len(srcKeyObjDataList)
 
-if listOnly != listOnlyOption.DESTINATION.value:
-    print("\nNumber of Src List Keys: ", srcKeyListCnt)
-    print("Number of exportable Src Key Objects: ", srcKeyObjCnt)
-    printSrcKeyObjDataList(srcKeyObjDataList)
+    if listOnly != listOnlyOption.DESTINATION.value:
+        print("\nNumber of Src List Keys: ", srcKeyListCnt)
+        print("Number of exportable Src Key Objects: ", srcKeyObjCnt)
+        printSrcKeyObjDataList(srcKeyObjDataList)
 
-    print("\n --- SRC KEY OBJECT RETRIEVAL COMPLETE --- \n")
+        print("\n --- SRC KEY OBJECT RETRIEVAL COMPLETE --- \n")
 
+if listOnly != listOnlyOption.SOURCE.value:
+    dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
+    print("  * Destination Access Confirmed *")
+
+# Get destination user meta data that will be used later for 
+    dstUsrSelfJSON  = getDstUserSelf(dstHost, dstPort, dstAuthStr)
+
+    CM_userName     = dstUsrSelfJSON[CMUserAttribute.NAME.value]
+    CM_userNickname = dstUsrSelfJSON[CMUserAttribute.NICKNAME.value]
+    CM_userID       = dstUsrSelfJSON[CMUserAttribute.USER_ID.value]
+
+    tmpStr = "    Username: %s\n    User: %s\n    UserID: %s\n" %(CM_userNickname, CM_userName, CM_userID)
+    print(tmpStr)
+
+# Get a list of all users on the destination for later use and create a dictionary of user_id and nickname
+    dstUsrsAllData  = getDstUsersAll(dstHost, dstPort, dstAuthStr)
+    dstUsrsAllJSON  = dstUsrsAllData[CMAttributeType.RESOURCES.value]   # extract just the user data
+    dstUsrsAllDict  = {} # define user dictionary - to be used later
+
+    for t_idx in dstUsrsAllJSON:
+        t_user_id   = t_idx[CMUserAttribute.USER_ID.value]
+        t_nickname  = t_idx[CMUserAttribute.NICKNAME.value]
+        dstUsrsAllDict[t_user_id] = t_nickname
+    
 if listOnly == listOnlyOption.NEITHER.value:
 # Create and upload all of the key objects to the destination unless a flag to LIST ONLY has been specified.  
 
