@@ -150,7 +150,7 @@ def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
 # -----------------------------------------------------------------------------
 # REST Assembly for reading specific Key Data 
 #
-# Using the getSrcKeyList API above, this routin queries the src and returns
+# Using the getSrcKeyList API above, this routine queries the src and returns
 # the KEYBLOCK for each key.
 #
 # NOTE that this call exports the key into an encrypted file on GKLM....
@@ -171,13 +171,14 @@ def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.post(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            kPrintError("getSrcKeyDataList", r)
+            print(r)
+            # kPrintError("getSrcKeyDataList", r)
             exit()
 
         t_data          = r.json()
         t_srcKeyData.append(t_data)     # Add data to list
 
-        # print("Src Key ", obj, " Alias:", t_srcKeyData[obj][GKLMAttributeType.ALIAS.value])
+        print("Src Key ", obj, " Alias:", t_srcKeyData[obj][GKLMAttributeType.ALIAS.value])
         
     return t_srcKeyDataList
 
