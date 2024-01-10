@@ -17,9 +17,8 @@ import  hashlib
 #from    urllib3.exceptions import InsecureRequestWarning
 from    kerrors import *
 from    krestcmds import *
-from    krestenums import CryptographicUsageMask
-from    krestenums import listOnlyOption
-from    krestenums import CMUserAttribute
+from    krestenums import *
+from    netappfilters import *
 
 # ---------------- Constants ----------------------------------------------------
 DEFAULT_SRC_PORT    = ["9443"]
@@ -27,7 +26,7 @@ DEFAULT_DST_PORT    = ["443"]
 
 # ################################################################################
 
-# ----- Input Parsing ------------------------------------------------------------
+# ----- INPUT PARSING BEGIN ------------------------------------------------------
 
 # Parse command.  Note that if the arguments are not complete, a usage message 
 # will be printed automatically
@@ -54,40 +53,82 @@ parser.add_argument("-listOnly", nargs=1, action="store", dest="listOnly", requi
                             ],
                     default=[listOnlyOption.NEITHER.value] )
 
+####################################################################################
+# NOTE: The following OPTIONAL flags are commulative, meaning that only keys that satisfy ALL
+# of the UUID and NetApp flags will be processed.
+####################################################################################
+
 # Added ability to specify a source UUID.  If populated, then the actions 
 # specified (read or migrate) will only apply to the particular UUID
 parser.add_argument("-srcuuid", nargs=1, action="store", dest="srcUuid", required=False)
 srcUUID = ""   #set default to a zero length string
 
+# Added ability to specify NetApp CUSTOME ATTRIBUTES.  If populated, then the actions 
+# specified (read or migrate) will only apply to the those keys that satisfy the specified
+# attribute requirements.
+parser.add_argument("-netAppNodeID", nargs=1, action="store", dest="srcNANodeID", required=False)
+srcNetAppNodeID = ""   #set default to a zero length string
+
+parser.add_argument("-netAppClusterName", nargs=1, action="store", dest="srcNAClusterName", required=False)
+srcNetAppClusterName = ""   #set default to a zero length string
+
+parser.add_argument("-netAppVserverID", nargs=1, action="store", dest="srcNAVserverID", required=False)
+srcNetAppVserverID = ""   #set default to a zero length string
+
 # Args are returned as a LIST.  Separate them into individual strings
 args = parser.parse_args()
+
+# Display results from inputs
+print("\n ---- SRC & DST PARAMETERS ----")
 
 srcHost = str(" ".join(args.srcHost))
 srcPort = str(" ".join(args.srcPort))
 srcUser = str(" ".join(args.srcUser))
 srcPass = str(" ".join(args.srcPass))
+tmpStr = " SrcHost: %s\n SrcPort: %s\n SrcUser: %s\n" %(srcHost, srcPort, srcUser)
+print(tmpStr)
 
 dstHost = str(" ".join(args.dstHost))
 dstPort = str(" ".join(args.dstPort))
 dstUser = str(" ".join(args.dstUser))
 dstPass = str(" ".join(args.dstPass))
+tmpStr = " DstHost: %s\n DstPort: %s\n DstUser: %s\n" %(dstHost, dstPort, dstUser)
+print(tmpStr)
 
+print(" ---- COMBINED FILTERS ----")
 listOnly = str(" ".join(args.listOnly))
-
-print("\n ---- INPUT STATS: ----")
-print("  Src: ", srcHost, srcPort, srcUser)
-print(" Dest: ", dstHost, dstPort, dstUser)
 print(" ListOnly:", listOnly)
 
 if args.srcUuid is not None:
     srcUUID = str(" ".join(args.srcUuid))
     print(" UUID:", srcUUID)
 
-# ---- Parsing Complete ----------------------------------------------------------
+# NetAPP Custom Attributes.  If custom attributes are specified in the command line
+# ensure they are included in a dictionary that will be used to filter out the objects
+srcNetAppFilterDict = {}
+if args.srcNANodeID is not None:
+    srcNetAppNodeID = str(" ".join(args.srcNANodeID))
+    print(" NetApp NodeID:", srcNetAppNodeID)
+    srcNetAppFilterDict[NetAppAttribute.NODEID.value] = srcNetAppNodeID
+    
+if args.srcNAClusterName is not None:
+    srcNetAppClusterName = str(" ".join(args.srcNAClusterName))
+    print(" NetApp ClusterName:", srcNetAppClusterName)
+    srcNetAppFilterDict[NetAppAttribute.CLUSTERNAME.value] = srcNetAppClusterName
 
-# --------------------------------------------------------------------------------
+if args.srcNAVserverID is not None:
+    srcNetAppVserverID = str(" ".join(args.srcNAVserverID))
+    print(" NetApp VServer ID:", srcNetAppVserverID)
+    srcNetAppFilterDict[NetAppAttribute.VSERVERID.value] = srcNetAppVserverID
+    
+# DEBUG - this is a custom attribute that appears occastionally for non-NetApp objects
+# srcNetAppFilterDict['y-RNGSimulation'] = 'Qg'
+
+# ---- PARSING COMPLETE ----------------------------------------------------------
+
+# ################################################################################
 # ---- MAIN MAIN MAIN ------------------------------------------------------------
-# --------------------------------------------------------------------------------
+# ################################################################################
 
 # Get Source and Destination Authorization Token/Strings
 print("\n Accessing Source and Destination Hosts and collecting Authorization Strings...")
@@ -108,11 +149,17 @@ if listOnly != listOnlyOption.DESTINATION.value:
 #
 # Note that we have now added the ability to specify a UUID.
     srcKeyObjDataList   = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr, srcUUID)
-    srcKeyObjCnt        = len(srcKeyObjDataList)
 
+# If the length of the NetApp filter (dictionary) is greater than zero, apply NetApp filter.
+    if len(srcNetAppFilterDict) > 0:
+        t_srcFilteredList = filterNetAppSrcKeyObjDataList(srcKeyObjDataList, srcNetAppFilterDict)
+        srcKeyObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
+
+    srcKeyObjCnt        = len(srcKeyObjDataList)
+        
     if listOnly != listOnlyOption.DESTINATION.value:
         print("\nNumber of Src List Keys: ", srcKeyListCnt)
-        print("Number of exportable Src Key Objects: ", srcKeyObjCnt)
+        print("Number of filtered and exportable Src Key Objects: ", srcKeyObjCnt)
         printSrcKeyObjDataList(srcKeyObjDataList)
 
         print("\n --- SRC KEY OBJECT RETRIEVAL COMPLETE --- \n")
@@ -192,11 +239,11 @@ if listOnly == listOnlyOption.NEITHER.value:
 
         
 # Errors are thrown if the key already exists.
-    print("\nImporting key material into destination...\n")
+    print("\nImporting key material into destination...")
     for xKeyObj in xKeyObjList:
         print("\n xKeyObj: ",  xKeyObj[CMAttributeType.NAME.value])    
         success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, xKeyObj)
-        print("\n importDstDataOjbect Success:", success)
+        print(" --> importDstDataOjbect Success:", success)
 
 if listOnly != listOnlyOption.SOURCE.value:
     # Read keys that are now in the destination unless the user asks for source-only information

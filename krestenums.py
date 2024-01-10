@@ -91,7 +91,7 @@ class GKLMAttributeType(enum.Enum):
     LINK                        = 'Link'
     DIGEST                      = 'Digest'
     APPLICATION_SPECIFIC_INFORMATION = 'Application Specific Information'
-    CUSTOMER_ATTRIBUTES         = 'Custom Attributes'
+    CUSTOM_ATTRIBUTES           = 'Custom Attributes'
     LAST_CHANGED_DATE           = 'Last Changed Date'
     COMPROMISE_OCCURANCE_DATE   = 'Compromise Occurence Date'
     LEASE_TIME                  = 'Lease Time'
@@ -145,6 +145,9 @@ class listOnlyOption(enum.Enum):
     DESTINATION                 = 'DESTINATION'
     BOTH                        = 'BOTH'
     
-    
+class NetAppAttribute(enum.Enum):
+    NODEID                      = 'x-NETAPP-NodeId'
+    CLUSTERNAME                 = 'x-NETAPP-ClusterName'
+    VSERVERID                   = 'x-NETAPP-VserverId'
     
     

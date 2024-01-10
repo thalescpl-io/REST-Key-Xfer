@@ -302,7 +302,7 @@ def printSrcKeyObjDataList(t_srcKeyObjDataList):
         t_kt     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.KEY_TYPE.value])
         t_hv     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.DIGEST.value])
         
-        tmpStr =    "\nSrc Key Obj Data List Info: %s Alias: %s" \
+        tmpStr =    "\nSrc Obj: %s Alias: %s" \
                     "\n  UUID: %s"    \
                     "\n  Key Type: %s " \
                     "\n  Hash: %s" \
