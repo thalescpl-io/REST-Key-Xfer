@@ -9,8 +9,9 @@ python3 k-rest.py \
 -srcUser SKLMAdmin -srcPass Thales_4567 \
 -dstHost cm-kirk.test256.io \
 -dstUser rest_alice -dstPass Thales234! \
--listOnly SOURCE \
+-listOnly NEITHER \
 -srcuuid KEY-c \
 -netAppNodeID 8d \
 -netAppClusterName AFF \
--netAppVserverID 42
+-netAppVserverID 42 \
+-dstUserGroupName Group3

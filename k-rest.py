@@ -75,8 +75,14 @@ srcNetAppClusterName = ""   #set default to a zero length string
 parser.add_argument("-netAppVserverID", nargs=1, action="store", dest="srcNAVserverID", required=False)
 srcNetAppVserverID = ""   #set default to a zero length string
 
+parser.add_argument("-dstUserGroupName", nargs=1, action="store", dest="dstUserGroupName", required=False)
+dstUserGroupName = ""   #set default to a zero length string
+
+
 # Args are returned as a LIST.  Separate them into individual strings
 args = parser.parse_args()
+
+
 
 # Display results from inputs
 print("\n ---- SRC & DST PARAMETERS ----")
@@ -95,16 +101,50 @@ dstPass = str(" ".join(args.dstPass))
 tmpStr = " DstHost: %s\n DstPort: %s\n DstUser: %s\n" %(dstHost, dstPort, dstUser)
 print(tmpStr)
 
-print(" ---- COMBINED FILTERS ----")
-listOnly = str(" ".join(args.listOnly))
-print(" ListOnly:", listOnly)
 
+# ------------- Group Management ------------------------------------
+# If a Group is specified, then capture the group name and check to 
+# see if it is present. The flag variable will be used later to create
+# the group (and add the user to it), # if keys needs to be added 
+# to the desitation.
+# -------------------------------------------------------------------
+t_flagGroupIsAbsent = False
+if args.dstUserGroupName is not None:
+    dstUserGroupName = str(" ".join(args.dstUserGroupName))
+    print(" DstUserGroupName: %s" %(dstUserGroupName))
+    
+    # If Group is specified, download the existing groups from the destination
+    # and see if the group is already present.
+    dstAuthStr = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
+    dstGrpList = getDstGroupsAll(dstHost, dstPort, dstAuthStr)
+    # printJList("dstGrpList:", dstGrpList)
+    
+    # Presume the group is not present, unless it is found within
+    # the list of download group names.
+    t_flagGroupIsAbsent = True
+    for t_Grp in dstGrpList[CMAttributeType.RESOURCES.value]:
+        if dstUserGroupName == t_Grp[CMAttributeType.NAME.value]:
+            print(" ", dstUserGroupName, "is present on the destination server.")
+            t_flagGroupIsAbsent = False
+    
+
+# ---- List Only Filters ----------------------------------------------
+# Collect the list only filter value and print it
+# ---------------------------------------------------------------------
+listOnly = str(" ".join(args.listOnly))
+print("\n ListOnly:", listOnly)
+
+# ---- List srcUUID ---------------------------------------------------
+# Collect the UUID string and print it
+# ---------------------------------------------------------------------
 if args.srcUuid is not None:
     srcUUID = str(" ".join(args.srcUuid))
-    print(" UUID:", srcUUID)
+    print(" Source UUID (filter):", srcUUID)
 
-# NetAPP Custom Attributes.  If custom attributes are specified in the command line
-# ensure they are included in a dictionary that will be used to filter out the objects
+# ---- NetAPP Customer Attributes---------------------------------------
+# If custom attributes are specified in the command line, ensure they 
+# are included in a dictionary that will be used to filter out the objects
+# -----------------------------------------------------------------------
 srcNetAppFilterDict = {}
 if args.srcNANodeID is not None:
     srcNetAppNodeID = str(" ".join(args.srcNANodeID))
@@ -187,9 +227,14 @@ if listOnly != listOnlyOption.SOURCE.value:
         t_user_id   = t_idx[CMUserAttribute.USER_ID.value]
         t_nickname  = t_idx[CMUserAttribute.NICKNAME.value]
         dstUsrsAllDict[t_user_id] = t_nickname
-    
+
+
+        
+        
 if listOnly == listOnlyOption.NEITHER.value:
-# Create and upload all of the key objects to the destination unless a flag to LIST ONLY has been specified.  
+###########################################################################################################        
+# Create and upload all of the key objects to the destination unless a flag to LIST ONLY has been specified. 
+########################################################################################################### 
 
     #  Map GKLM keys and values to CM
     xKeyObj     = {}
@@ -224,9 +269,11 @@ if listOnly == listOnlyOption.NEITHER.value:
         # and, therefore, needs some adjusting before it can be sent to CM.
         tmpStr  = srcKeyObjDataList[k][GKLMAttributeType.KEY_TYPE.value]
         tmpStr2 = tmpStr.replace("_", " ")  # SYMMETRIC_KEY -> SYMMETRIC KEY
+        
         xKeyObj[CMAttributeType.OBJECT_TYPE.value]  = tmpStr2.title()   # SYMMETRIC KEY -> Symmetric Key
 
         xKeyObj[CMAttributeType.MATERIAL.value]     = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
+        
         xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
         
         # Add a userID to the associated key object so it can be made owner of the key
@@ -237,16 +284,44 @@ if listOnly == listOnlyOption.NEITHER.value:
         xKeyObjList.append(xKeyObj.copy())
         # print("\n Key Obj: ", json.dumps(xKeyObj, skipkeys = True, allow_nan = True, indent = 3))
 
-        
-# Errors are thrown if the key already exists.
+    # ----------------------------------------------------------------
+    # Now that the keys have been read and mapped, send them to the
+    # destiation.  
+    #
+    # The first step is to ensure that if the dstUserGroup name is
+    # provided, that it exists on the destination server.  If it does
+    # not exist, create it and add the dstUsr to the group.
+    # ----------------------------------------------------------------
+
+    if args.dstUserGroupName is not None:
+        if t_flagGroupIsAbsent:
+            createDstUsrGroup(dstHost, dstPort, dstAuthStr, dstUserGroupName)
+            addDstUsrToGroup(dstHost, dstPort, dstAuthStr, CM_userNickname, CM_userID, dstUserGroupName)
+            print(" * ", dstUserGroupName, "group configuration complete. * ")
+    
     print("\nImporting key material into destination...")
+    
     for xKeyObj in xKeyObjList:
-        print("\n xKeyObj: ",  xKeyObj[CMAttributeType.NAME.value])    
+        t_keyObjName = xKeyObj[CMAttributeType.NAME.value]
+        print("\n xKeyObjName: ",  t_keyObjName)    
         success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, xKeyObj)
         print(" --> importDstDataOjbect Success:", success)
+        
+        # After the object has been successfully created, assign it to the Group, if one has been provided.
+        
+        if success:
+            if args.dstUserGroupName is not None:
+                xKeyObjFromDst = getDstKeyByName(dstHost, dstPort, dstAuthStr, t_keyObjName)
+                
+                addDataObjectToGroup(dstHost, dstPort, dstUserGroupName, dstAuthStr, xKeyObjFromDst)
+
+        
 
 if listOnly != listOnlyOption.SOURCE.value:
-    # Read keys that are now in the destination unless the user asks for source-only information
+###########################################################################################################        
+# Read keys that are now in the destination unless the user asks for source-only information 
+########################################################################################################### 
+
     print("\nRetrieving list of objects from destination...")
     dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
     print("\nDst Object List Count: ", len(dstObjList))
@@ -255,8 +330,14 @@ if listOnly != listOnlyOption.SOURCE.value:
     dstExpObjCnt    = len(dstObjData)
     print("Dst Exportable Data Object Count: ", dstExpObjCnt)
     printDstObjDataAndOwner(dstObjData, dstUsrsAllDict)
-
+    
     print("\n --- DST OBJECT RETRIEVAL COMPLETE --- \n")
+    
+
+   
+
+        
+        
 
 #####################################################################################
 #

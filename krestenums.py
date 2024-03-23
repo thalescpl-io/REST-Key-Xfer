@@ -132,12 +132,16 @@ class CMAttributeType(enum.Enum):
     FORMAT                      = 'format'
     OWNER_ID                    = 'ownerId'
     RESOURCES                   = 'resources'
+
+class CMAliasesAttribute(enum.Enum):
+    ALIAS                       = 'alias'
+    TYPE                        = 'type'
+    INDEX                       = 'index'
     
 class CMUserAttribute(enum.Enum):    
     NAME                        = 'name'
     NICKNAME                    = 'nickname'
     USER_ID                     = 'user_id'
-
         
 class listOnlyOption(enum.Enum):
     NEITHER                     = 'NEITHER'
@@ -150,4 +154,48 @@ class NetAppAttribute(enum.Enum):
     CLUSTERNAME                 = 'x-NETAPP-ClusterName'
     VSERVERID                   = 'x-NETAPP-VserverId'
     
+class CMMetaAttribute(enum.Enum):    
+    OWNER_ID                    = 'ownerId'
+    GROUP_PERMISSIONS           = 'permissions'
+
+class CMMetaGroupPermissions(enum.Enum):    
+    USE_KEY                     = 'UseKey'
+    READ_KEY                    = 'ReadKey'
+    EXPORT_KEY                  = 'ExportKey'
+    UPLOAD_KEY                  = 'UploadKey'
+    SIGN                        = 'SignWithKey'
+    DECRYPT                     = 'DecryptWithKey'
+    ENCRYPT                     = 'EncryptWithKey'
+    SIGN_VERIFY                 = 'SignVerifyWithKey'
     
+class CMUserGroup:
+    def __init__(self, name, member, description=None):
+        self.name               = name
+        self.member             = member
+        self.desc               = description
+
+class CMKeyNewMetaData:
+    def __init__(self, t_alias, t_group):
+        self.alias              = t_alias
+        self.group              = t_group
+        
+        self.permissions        = {}
+        self.permissions.update({"UseKey":              [t_group]})
+        self.permissions.update({"ReadKey":             [t_group]})
+        self.permissions.update({"ExportKey":           [t_group]})
+        self.permissions.update({"UploadKey":           [t_group]})
+        self.permissions.update({"SignWithKey":         [t_group]})
+        self.permissions.update({"DecryptWithKey":      [t_group]})
+        self.permissions.update({"EncryptWithKey":      [t_group]})
+        self.permissions.update({"SignVerifyWithKey":   [t_group]})
+        
+        self.meta               = {"permissions":self.permissions}
+        self.aliases            = [{"alias":t_alias, "type":"string"}]
+        self.allVersions        = True
+        
+        self.payload            = {"meta": self.meta, "aliases":self.aliases, "allVersions": self.allVersions}
+    
+class CMKeyEmptyAliasData:
+    def __init__(self):
+        self.aliases            = [{"alias":"", "index":0}]
+        self.payload            = {"aliases":self.aliases}    
