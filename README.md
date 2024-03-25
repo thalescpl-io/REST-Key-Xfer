@@ -38,7 +38,7 @@ __netAppVserverID:__    (optional)
             NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copyies from the Source Server to only those keys contain a NetApp-specific KMIP attribute NODENAME and contain all or part of the NODENAME string.            
 __Note that srcuuid, netAppNodeID, netAppClusterName, and netAppVserverID are optional, independent flags.  But when included, their filters are combined so that all criteria are applied when selecting the source keys.__
 
-__dstUserGroupName:__
+__dstUserGroupName:__    (optional)
             Desitination Group Name.  When supplied, keys written to the destination are also accessible by memembers of this group.  If the group does not originally exist, it is created and the dstUser is automatically added to the group on the destination server.
 
 
