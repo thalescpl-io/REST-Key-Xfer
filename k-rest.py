@@ -3,9 +3,9 @@
 # 	Name: k-rest.py
 # 	Author: Rick R
 # 	Purpose:  Python-based REST Key Transfer
-#   Usage: py k-rest.py -srcHost <hostname or IP> -srcUser <username> -srcPass <password> 
-#                   -dstHost <hostname or IP> -dstUser <username> -dstPass <password> 
-#                   
+#   Usage: py k-rest.py -srcHost <hostname or IP> -srcUser <username> -srcPass <password>
+#                   -dstHost <hostname or IP> -dstUser <username> -dstPass <password>
+#
 #####################################################################################
 
 import  argparse
@@ -28,7 +28,7 @@ DEFAULT_DST_PORT    = ["443"]
 
 # ----- INPUT PARSING BEGIN ------------------------------------------------------
 
-# Parse command.  Note that if the arguments are not complete, a usage message 
+# Parse command.  Note that if the arguments are not complete, a usage message
 # will be printed automatically
 parser = argparse.ArgumentParser(prog="k-rest.py", description="REST Client Data Exchange")
 
@@ -45,7 +45,7 @@ parser.add_argument("-dstUser", nargs=1, action="store", dest="dstUser", require
 parser.add_argument("-dstPass", nargs=1, action="store", dest="dstPass", required=True)
 
 # List only Flag - just list key material and do not change anything
-parser.add_argument("-listOnly", nargs=1, action="store", dest="listOnly", required=False, 
+parser.add_argument("-listOnly", nargs=1, action="store", dest="listOnly", required=False,
                     choices=[listOnlyOption.NEITHER.value,
                              listOnlyOption.SOURCE.value,
                              listOnlyOption.DESTINATION.value,
@@ -58,12 +58,12 @@ parser.add_argument("-listOnly", nargs=1, action="store", dest="listOnly", requi
 # of the UUID and NetApp flags will be processed.
 ####################################################################################
 
-# Added ability to specify a source UUID.  If populated, then the actions 
+# Added ability to specify a source UUID.  If populated, then the actions
 # specified (read or migrate) will only apply to the particular UUID
 parser.add_argument("-srcuuid", nargs=1, action="store", dest="srcUuid", required=False)
 srcUUID = ""   #set default to a zero length string
 
-# Added ability to specify NetApp CUSTOME ATTRIBUTES.  If populated, then the actions 
+# Added ability to specify NetApp CUSTOME ATTRIBUTES.  If populated, then the actions
 # specified (read or migrate) will only apply to the those keys that satisfy the specified
 # attribute requirements.
 parser.add_argument("-netAppNodeID", nargs=1, action="store", dest="srcNANodeID", required=False)
@@ -103,22 +103,22 @@ print(tmpStr)
 
 
 # ------------- Group Management ------------------------------------
-# If a Group is specified, then capture the group name and check to 
+# If a Group is specified, then capture the group name and check to
 # see if it is present. The flag variable will be used later to create
-# the group (and add the user to it), # if keys needs to be added 
+# the group (and add the user to it), # if keys needs to be added
 # to the desitation.
 # -------------------------------------------------------------------
 t_flagGroupIsAbsent = False
 if args.dstUserGroupName is not None:
     dstUserGroupName = str(" ".join(args.dstUserGroupName))
     print(" DstUserGroupName: %s" %(dstUserGroupName))
-    
+
     # If Group is specified, download the existing groups from the destination
     # and see if the group is already present.
     dstAuthStr = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
     dstGrpList = getDstGroupsAll(dstHost, dstPort, dstAuthStr)
     # printJList("dstGrpList:", dstGrpList)
-    
+
     # Presume the group is not present, unless it is found within
     # the list of download group names.
     t_flagGroupIsAbsent = True
@@ -126,7 +126,7 @@ if args.dstUserGroupName is not None:
         if dstUserGroupName == t_Grp[CMAttributeType.NAME.value]:
             print(" ", dstUserGroupName, "is present on the destination server.")
             t_flagGroupIsAbsent = False
-    
+
 
 # ---- List Only Filters ----------------------------------------------
 # Collect the list only filter value and print it
@@ -142,7 +142,7 @@ if args.srcUuid is not None:
     print(" Source UUID (filter):", srcUUID)
 
 # ---- NetAPP Customer Attributes---------------------------------------
-# If custom attributes are specified in the command line, ensure they 
+# If custom attributes are specified in the command line, ensure they
 # are included in a dictionary that will be used to filter out the objects
 # -----------------------------------------------------------------------
 srcNetAppFilterDict = {}
@@ -150,7 +150,7 @@ if args.srcNANodeID is not None:
     srcNetAppNodeID = str(" ".join(args.srcNANodeID))
     print(" NetApp NodeID:", srcNetAppNodeID)
     srcNetAppFilterDict[NetAppAttribute.NODEID.value] = srcNetAppNodeID
-    
+
 if args.srcNAClusterName is not None:
     srcNetAppClusterName = str(" ".join(args.srcNAClusterName))
     print(" NetApp ClusterName:", srcNetAppClusterName)
@@ -160,7 +160,7 @@ if args.srcNAVserverID is not None:
     srcNetAppVserverID = str(" ".join(args.srcNAVserverID))
     print(" NetApp VServer ID:", srcNetAppVserverID)
     srcNetAppFilterDict[NetAppAttribute.VSERVERID.value] = srcNetAppVserverID
-    
+
 # DEBUG - this is a custom attribute that appears occastionally for non-NetApp objects
 # srcNetAppFilterDict['y-RNGSimulation'] = 'Qg'
 
@@ -178,7 +178,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
     print("  * Source Access Confirmed *")
     tmpStr = "    Username: %s\n" %(srcUser)
     print(tmpStr)
-    
+
 # Get list of Source Keys
     srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
     srcKeyListCnt   = len(srcKeyList)
@@ -196,7 +196,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
         srcKeyObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
     srcKeyObjCnt        = len(srcKeyObjDataList)
-        
+
     if listOnly != listOnlyOption.DESTINATION.value:
         print("\nNumber of Src List Keys: ", srcKeyListCnt)
         print("Number of filtered and exportable Src Key Objects: ", srcKeyObjCnt)
@@ -208,7 +208,7 @@ if listOnly != listOnlyOption.SOURCE.value:
     dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
     print("  * Destination Access Confirmed *")
 
-# Get destination user meta data that will be used later for 
+# Get destination user meta data that will be used later for
     dstUsrSelfJSON  = getDstUserSelf(dstHost, dstPort, dstAuthStr)
 
     CM_userName     = dstUsrSelfJSON[CMUserAttribute.NAME.value]
@@ -229,19 +229,19 @@ if listOnly != listOnlyOption.SOURCE.value:
         dstUsrsAllDict[t_user_id] = t_nickname
 
 
-        
-        
+
+
 if listOnly == listOnlyOption.NEITHER.value:
-###########################################################################################################        
-# Create and upload all of the key objects to the destination unless a flag to LIST ONLY has been specified. 
-########################################################################################################### 
+###########################################################################################################
+# Create and upload all of the key objects to the destination unless a flag to LIST ONLY has been specified.
+###########################################################################################################
 
     #  Map GKLM keys and values to CM
     xKeyObj     = {}
     xKeyObjList = []
 
-    # -------------- MAPPING ------------------------------------------------------------------------ 
-    # For each key object in the source, map it with the proper dictionary keys to a x-formed list of 
+    # -------------- MAPPING ------------------------------------------------------------------------
+    # For each key object in the source, map it with the proper dictionary keys to a x-formed list of
     # dictionaries for later upload to the destination
     # -----------------------------------------------------------------------------------------------
     for k in range(srcKeyObjCnt):
@@ -251,11 +251,11 @@ if listOnly == listOnlyOption.NEITHER.value:
         # The GKLM Key Usage Mask string must be replaced with the appropriate value before storing it in CM.
         srcUM       = srcKeyObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value]
         srcUMClean  = "".join(srcUM.split())    #trim leading and trailing spaces from srcUM string
-        for tmpUM in CryptographicUsageMask:        
+        for tmpUM in CryptographicUsageMask:
             if srcUMClean == tmpUM.name:
                 xKeyObj[CMAttributeType.USAGE_MASK.value]   = tmpUM.value
 
-        # The GKLM Alias seems to match the patter of the CM Name key.  
+        # The GKLM Alias seems to match the patter of the CM Name key.
         # However, GKLM includes brakcets ("[]") in the string
         # and they need to be removed before copying the true alias value to CM
         tmpStr = srcKeyObjDataList[k][GKLMAttributeType.ALIAS.value]
@@ -269,13 +269,13 @@ if listOnly == listOnlyOption.NEITHER.value:
         # and, therefore, needs some adjusting before it can be sent to CM.
         tmpStr  = srcKeyObjDataList[k][GKLMAttributeType.KEY_TYPE.value]
         tmpStr2 = tmpStr.replace("_", " ")  # SYMMETRIC_KEY -> SYMMETRIC KEY
-        
+
         xKeyObj[CMAttributeType.OBJECT_TYPE.value]  = tmpStr2.title()   # SYMMETRIC KEY -> Symmetric Key
 
         xKeyObj[CMAttributeType.MATERIAL.value]     = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
-        
+
         xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
-        
+
         # Add a userID to the associated key object so it can be made owner of the key
         # when uploaded to CM
         xKeyObj[CMAttributeType.META.value]= {CMAttributeType.OWNER_ID.value: CM_userID}
@@ -286,7 +286,7 @@ if listOnly == listOnlyOption.NEITHER.value:
 
     # ----------------------------------------------------------------
     # Now that the keys have been read and mapped, send them to the
-    # destiation.  
+    # destiation.
     #
     # The first step is to ensure that if the dstUserGroup name is
     # provided, that it exists on the destination server.  If it does
@@ -298,46 +298,46 @@ if listOnly == listOnlyOption.NEITHER.value:
             createDstUsrGroup(dstHost, dstPort, dstAuthStr, dstUserGroupName)
             addDstUsrToGroup(dstHost, dstPort, dstAuthStr, CM_userNickname, CM_userID, dstUserGroupName)
             print(" * ", dstUserGroupName, "group configuration complete. * ")
-    
+
     print("\nImporting key material into destination...")
-    
+
     for xKeyObj in xKeyObjList:
         t_keyObjName = xKeyObj[CMAttributeType.NAME.value]
-        print("\n xKeyObjName: ",  t_keyObjName)    
+        print("\n xKeyObjName: ",  t_keyObjName)
         success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, xKeyObj)
         print(" --> importDstDataOjbect Success:", success)
-        
+
         # After the object has been successfully created, assign it to the Group, if one has been provided.
-        
+
         if success:
             if args.dstUserGroupName is not None:
                 xKeyObjFromDst = getDstKeyByName(dstHost, dstPort, dstAuthStr, t_keyObjName)
-                
+
                 addDataObjectToGroup(dstHost, dstPort, dstUserGroupName, dstAuthStr, xKeyObjFromDst)
 
-        
+
 
 if listOnly != listOnlyOption.SOURCE.value:
-###########################################################################################################        
-# Read keys that are now in the destination unless the user asks for source-only information 
-########################################################################################################### 
+###########################################################################################################
+# Read keys that are now in the destination unless the user asks for source-only information
+###########################################################################################################
 
     print("\nRetrieving list of objects from destination...")
     dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
     print("\nDst Object List Count: ", len(dstObjList))
-    
+
     dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
     dstExpObjCnt    = len(dstObjData)
     print("Dst Exportable Data Object Count: ", dstExpObjCnt)
     printDstObjDataAndOwner(dstObjData, dstUsrsAllDict)
-    
+
     print("\n --- DST OBJECT RETRIEVAL COMPLETE --- \n")
-    
 
-   
 
-        
-        
+
+
+
+
 
 #####################################################################################
 #

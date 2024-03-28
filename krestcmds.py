@@ -38,14 +38,14 @@ def printJList(t_str, t_jList):
 # -------------------------------------------------------------------------------
 # A quick subscript that makes it easy to print out a list of JSON information in
 # a more readable format.
-# -------------------------------------------------------------------------------    
+# -------------------------------------------------------------------------------
     print("\n ", t_str, json.dumps(t_jList, skipkeys = True, allow_nan = True, indent = 3))
 
-    
+
 def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
 # -----------------------------------------------------------------------------
-# REST Assembly for Src LOGIN 
-# 
+# REST Assembly for Src LOGIN
+#
 # The objective of this section is to provide the username and password parameters
 # to the REST interface of the src host in return for a AUTHORIZATION STRING (token)
 # that is used for authentication of other commands
@@ -59,7 +59,7 @@ def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
     # Suppress SSL Verification Warnings
     requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
-    # Note that GKLM does not required Basic Auth to retrieve information.  
+    # Note that GKLM does not required Basic Auth to retrieve information.
     # Instead, the body of the call contains the userID and password.
     r = requests.post(t_srcHostRESTCmd, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
 
@@ -69,13 +69,13 @@ def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
 
     # Extract the UserAuthId from the value of the key-value pair of the JSON reponse.
     t_srcUserAuthID         = r.json()['UserAuthId']
-    t_srcAuthStr            = "SKLMAuth UserAuthId="+t_srcUserAuthID 
+    t_srcAuthStr            = "SKLMAuth UserAuthId="+t_srcUserAuthID
 
     return t_srcAuthStr
 
 def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 # -----------------------------------------------------------------------------
-# REST Assembly for reading List of Src Cryptographic Objects 
+# REST Assembly for reading List of Src Cryptographic Objects
 #
 # The objective of this section is to querry a list of cryptographic
 # objects current stored or managed by the src host.
@@ -99,10 +99,10 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
 
 def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
 # -----------------------------------------------------------------------------
-# REST Assembly for reading specific Object Data 
+# REST Assembly for reading specific Object Data
 #
 # Using the getSrcObjList API above, the src host delivers all BUT the actual
-# key block of object.  This section returns and collects the key block for 
+# key block of object.  This section returns and collects the key block for
 # each object.
 # -----------------------------------------------------------------------------
     t_srcRESTListObjects        = SRC_REST_PREAMBLE + "objects"
@@ -123,12 +123,12 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
 
         t_data   = r.json()['managedObject']
         t_srcObjData.append(t_data)     # Add data to list
-        
+
     return t_srcObjData
 
 def getSrcKeyList(t_srcHost, t_srcPort, t_srcAuthStr):
 # -----------------------------------------------------------------------------
-# REST Assembly for reading specific Key List 
+# REST Assembly for reading specific Key List
 #
 # Using the keys API, the src host delivers all material EXCEPT for the actual
 # key block of keys.  Once we have this information (especially the UUID), we can
@@ -153,7 +153,7 @@ def getSrcKeyList(t_srcHost, t_srcPort, t_srcAuthStr):
 
 def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
 # -----------------------------------------------------------------------------
-# REST Assembly for reading specific Key Data 
+# REST Assembly for reading specific Key Data
 #
 # Using the getSrcKeyList API above, this routine queries the src and returns
 # the KEYBLOCK for each key.
@@ -168,7 +168,7 @@ def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
     for obj in range(t_ListLen):
         t_srcKeyAlias       = t_srcKeyList[obj][GKLMAttributeType.ALIAS.value]
         t_srcHostRESTCmd    = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTGetKeys, t_srcKeyAlias)
-        
+
         t_srcHeaders        = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
 
         # Note that REST Command does not require a body object in this GET REST Command
@@ -182,7 +182,7 @@ def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
         t_srcKeyData.append(t_data)     # Add data to list
 
         print("Src Key ", obj, " Alias:", t_srcKeyData[obj][GKLMAttributeType.ALIAS.value])
-        
+
     return t_srcKeyDataList
 
 def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr, t_suuid):
@@ -190,10 +190,10 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr, t_suu
 # REST Assembly for reading specific Key Data via OBJECT
 #
 # Using the getSrcKeyList API above, the src host delivers all BUT the actual
-# key block of a key.  This section returns and collects the key block for 
+# key block of a key.  This section returns and collects the key block for
 # each key by collecting them from the OBJECT REST API.
 # -----------------------------------------------------------------------------
-    
+
     t_srcRESTKeyObjects = SRC_REST_PREAMBLE + "objects"
     t_ListLen           = len(t_srcKeyList)
 
@@ -201,21 +201,21 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr, t_suu
     t_cnt               = 0  # keep track of the number of exportable key objects
 
     for obj in range(t_ListLen):
-        
+
         # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr
-        
+
         t_owner         = str(t_srcKeyList[obj][GKLMAttributeType.OWNER.value])
         t_kt            = str(t_srcKeyList[obj][GKLMAttributeType.KEY_TYPE.value])
         t_srcObjID      = t_srcKeyList[obj][GKLMAttributeType.UUID.value]
         t_srcObjAlias   = t_srcKeyList[obj][GKLMAttributeType.ALIAS.value]
-        
+
         t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjects, t_srcObjID)
         t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
-        
+
         # Note that REST Command does not require a body object in this GET REST Command
         # Also, only process SYMMETRIC_KEYS
-            
-        if (t_kt == ObjectType.SYMMETRIC_KEY.name and len(t_owner) > 1):        
+
+        if (t_kt == ObjectType.SYMMETRIC_KEY.name and len(t_owner) > 1):
             r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
             if(r.status_code != STATUS_CODE_OK):
                 kPrintError("getSrcKeyObjDataList", r)
@@ -225,27 +225,27 @@ def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr, t_suu
                 t_data   = r.json()['managedObject']
                 t_srcKeyObjDataList.append(t_data)     # Add data to list
                 t_cnt += 1  # increment object count
-                
+
             elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
                 t_data   = r.json()['managedObject']
                 t_srcKeyObjDataList.append(t_data)     # Add data to list
                 t_cnt += 1  # increment object count
-    
+
     return t_srcKeyObjDataList
 
 def printSrcKeyList(t_srcKeyList):
 # -----------------------------------------------------------------------------
 # Display the contents of a srcKeyList
 # -----------------------------------------------------------------------------
-    
+
     t_success           = True
     t_ListLen           = len(t_srcKeyList)
 
     for obj in range(t_ListLen):
-        
-        # Separate string conversions before sending.  
+
+        # Separate string conversions before sending.
         # Python gets confused if they are all converted as part of the string assembly of tmpStr
-        
+
         t_alias = str(t_srcKeyList[obj][GKLMAttributeType.ALIAS.value])
         t_uuid  = str(t_srcKeyList[obj][GKLMAttributeType.UUID.value])
         t_ksn   = str(t_srcKeyList[obj][GKLMAttributeType.KEY_STORE_NAME.value])
@@ -253,7 +253,7 @@ def printSrcKeyList(t_srcKeyList):
         t_owner = str(t_srcKeyList[obj][GKLMAttributeType.OWNER.value])
         t_usage = str(t_srcKeyList[obj][GKLMAttributeType.USAGE.value])
         t_kt    = str(t_srcKeyList[obj][GKLMAttributeType.KEY_TYPE.value])
-        
+
         tmpStr =    "\nSrc Key List Info: %s Alias: %s UUID: %s"    \
                     "\n  Key Store Name: %s Key Store UUID: %s"  \
                     "\n  Owner: %s\n  Usage: %s Key Type: %s" \
@@ -277,54 +277,54 @@ def convertGKLMHashToString(t_GKLMHash):
     t_sizeH     = len(t_Header)
     t_Trailer   = " [DIGESTED"  # first few characters of string at end of hash value
     t_chars     = "[^0-9a-f]"          # only characters that need to be kept
-    
+
     t_startPos  = t_GKLMHash.find(t_Header)
     t_endPos    = t_GKLMHash.find(t_Trailer)
-    
+
     tmpStr1  = t_GKLMHash[t_startPos+t_sizeH:t_endPos]
     tmpStr2 = re.sub(t_chars, "", tmpStr1)
-        
+
     return tmpStr2
 
 def printSrcKeyObjDataList(t_srcKeyObjDataList):
 # -----------------------------------------------------------------------------
 # Display the contents of a srcKeyObjDataList
 # -----------------------------------------------------------------------------
-    
+
     t_success           = True
     t_ListLen           = len(t_srcKeyObjDataList)
-        
+
     for obj in range(t_ListLen):
-        
-        # Separate string conversions before sending.  
+
+        # Separate string conversions before sending.
         # Python gets confused if they are all converted as part of the string assembly of tmpStr.  tmpStr.strip("[]")
-        
+
         t_alias = str(t_srcKeyObjDataList[obj][GKLMAttributeType.ALIAS.value])
         t_uuid  = str(t_srcKeyObjDataList[obj][GKLMAttributeType.UUID.value])
         t_kt     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.KEY_TYPE.value])
         t_hv     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.DIGEST.value])
-        
+
         tmpStr =    "\nSrc Obj: %s Alias: %s" \
                     "\n  UUID: %s"    \
                     "\n  Key Type: %s " \
                     "\n  Hash: %s" \
                     %(obj, t_alias.strip("[]"), t_uuid, t_kt, convertGKLMHashToString(t_hv))
 
-        print(tmpStr)            
-        
+        print(tmpStr)
+
     return t_success
 
 def createDstAuthStr(t_dstHost, t_dstPort, t_dstUser, t_dstPass):
 # -----------------------------------------------------------------------------
-# REST Assembly for DESTINATION HOST LOGIN 
-# 
+# REST Assembly for DESTINATION HOST LOGIN
+#
 # The objective of this section is to provide the username and password parameters
-# to the REST interface of the dst host in return for a BEARER TOKEN that is 
+# to the REST interface of the dst host in return for a BEARER TOKEN that is
 # used for authentication of other commands.
 # -----------------------------------------------------------------------------
 
     t_dstRESTTokens         = DST_REST_PREAMBLE + "auth/tokens/"
-    t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTTokens)    
+    t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTTokens)
 
     t_dstHeaders            = {"Content-Type":APP_JSON}
     t_dstBody               = {"name":t_dstUser, "password":t_dstPass}
@@ -332,7 +332,7 @@ def createDstAuthStr(t_dstHost, t_dstPort, t_dstUser, t_dstPass):
     # Suppress SSL Verification Warnings
     requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
-    # Note that CM does not required Basic Auth to retrieve information.  
+    # Note that CM does not required Basic Auth to retrieve information.
     # Instead, the body of the call contains the username and password.
     r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_dstBody), headers=t_dstHeaders, verify=False)
 
@@ -349,13 +349,13 @@ def createDstAuthStr(t_dstHost, t_dstPort, t_dstUser, t_dstPass):
 def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
 # -----------------------------------------------------------------------------
 # REST Assembly for DESTINATION OBJECT READING KEYS
-# 
+#
 # The objective of this section is to use the Dst Authorization / Bearer Token
 # to query the dst hosts REST interface about keys.
 # -----------------------------------------------------------------------------
 
     t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
-    t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList)   
+    t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList)
 
     t_dstHeaders            = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization": t_dstAuthStr}
 
@@ -370,23 +370,23 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
 
     # print("\n         Dst Objects: ", t_dstObjList[0].keys())
     return t_dstObjList
-    
+
 def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 # -----------------------------------------------------------------------------
 # REST Assembly for EXPORTING specific Object Data from DESTINATION HOST
 #
 # Using the VAULT/KEYS2 API above, the dst host delivers all but the actual
-# key block of object.  This section returns and collects the key block for 
+# key block of object.  This section returns and collects the key block for
 # each object.
 # -----------------------------------------------------------------------------
 
     t_dstRESTAPI            = DST_REST_PREAMBLE + "vault/keys2"
     t_dstRESTKeyExportFlag  = "export"
-    
+
     t_dstObjData            = [] # created list to be returned later
     t_ObjCnt                = 0  # Initialize counter
     t_ListLen               = len(t_dstObjList)
-    
+
     for obj in range(t_ListLen):
         dstObjID    = t_dstObjList[obj][CMAttributeType.ID.value]
         dstObjName  = t_dstObjList[obj][CMAttributeType.NAME.value]
@@ -408,12 +408,12 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
             kPrintError("exportDstObjData", r)
             continue
 
-        t_data      = r.json()        
+        t_data      = r.json()
         t_dstObjData.append(t_data)  #Add data to te list
-        
+
         # tmpStr ="Dst Obj: %s Name: %s " %(obj, dstObjName)
         # print(tmpStr)
-        
+
         t_ObjCnt += 1
 
     return t_dstObjData
@@ -425,7 +425,7 @@ def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_xKeyObj
 # Using the VAULT/KEYS2 API, this code adds individual keys to the desitation.
 # This routine needs to be called for EACH key that needs to be written.
 #
-# Note that an ERROR will occur if a key of the same name already exists in the 
+# Note that an ERROR will occur if a key of the same name already exists in the
 # destination.
 # -----------------------------------------------------------------------------
 
@@ -438,39 +438,39 @@ def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_xKeyObj
 
     t_success = True
     if(r.status_code == STATUS_CODE_CREATED):
-        t_Response      = r.json()        
+        t_Response      = r.json()
         # print("  ->Object Created: ", t_Response[CMAttributeType.NAME.value])
     else:
-        kPrintError("importDstDataObject", r)        
+        kPrintError("importDstDataObject", r)
         t_success = False
-        
+
     return t_success
 
 def printDstObjList(t_dstObjList):
 # -----------------------------------------------------------------------------
 # Display the contents of a dstKeyObjList
 # -----------------------------------------------------------------------------
-    
+
     t_ListLen           = len(t_dstObjList)
 
     t_success           = True
     for obj in range(t_ListLen):
-        
+
         # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr.
         # Error checking added in case an attribute is missing (may happen with opaque objects)
-        
+
         try:
             t_name  = str(t_dstObjList[obj][CMAttributeType.NAME.value])
             t_uuid  = str(t_dstObjList[obj][CMAttributeType.UUID.value])
             t_ot    = str(t_dstObjList[obj][CMAttributeType.OBJECT_TYPE.value])
             t_fp    = str(t_dstObjList[obj][CMAttributeType.SHA256_FINGERPRINT.value])
-        
+
             tmpStr =    "\nDst Obj: %s Name: %s" \
             "\n  UUID: %s" \
             "\n  Key Type: %s" \
             "\n  Hash: %s" \
             %(obj, t_name, t_uuid, t_ot, t_fp)
-            
+
         except Exception as e:
             t_success           = False
             tmpStr =    "\nDst Obj: %s Name: %s" \
@@ -485,17 +485,17 @@ def printDstObjDataAndOwner(t_dstObjData, t_UserDict):
 # -----------------------------------------------------------------------------
 # Display the contents of a dstObjData
 # -----------------------------------------------------------------------------
-    
+
     t_ListLen   = len(t_dstObjData)
 
     t_success   = True
     for obj in range(t_ListLen):
         t_meta      = ""
-        t_OID       = ""        
-        # Separate string conversions before sending.  Python gets confused if 
+        t_OID       = ""
+        # Separate string conversions before sending.  Python gets confused if
         # they are all converted as part of the string assembly of tmpStr.
         # Error checking added in case an attribute is missing (may happen with opaque objects)
-        
+
         try:
             t_name  = str(t_dstObjData[obj][CMAttributeType.NAME.value])
             t_uuid  = str(t_dstObjData[obj][CMAttributeType.UUID.value])
@@ -505,7 +505,7 @@ def printDstObjDataAndOwner(t_dstObjData, t_UserDict):
             t_oID   = str(t_dstObjData[obj][CMAttributeType.META.value][CMAttributeType.OWNER_ID.value])
             t_alias = str(t_dstObjData[obj][CMAttributeType.ALIASES.value][0][CMAliasesAttribute.ALIAS.value])
             t_owner = t_UserDict[t_oID]
-            
+
             tmpStr  = "\nDst Obj: %s Name: %s" \
             "\n  UUID: %s" \
             "\n  Key Type: %s" \
@@ -515,7 +515,7 @@ def printDstObjDataAndOwner(t_dstObjData, t_UserDict):
             %(obj, t_name, t_uuid, t_ot, t_fp, t_oID, t_owner, t_alias)
             # "\n  Meta: %s" \
             # %(obj, t_name, t_uuid, t_ot, t_fp, t_oID, t_owner, t_meta)
-                    
+
         except Exception as e:
             t_success   = False
             tmpStr      = "\nDst ObjE: %s Name: %s" \
@@ -536,7 +536,7 @@ def getDstUserSelf(t_dstHost, t_dstPort, t_dstAuthStr):
 # -----------------------------------------------------------------------------
 
     t_dstRESTUserMgmtSelf   = DST_REST_PREAMBLE + "usermgmt/users/self" #Note that the user 'self'
-        
+
     t_dstHostRESTCmd    = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTUserMgmtSelf)
     t_dstHeaders        = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
 
@@ -548,7 +548,7 @@ def getDstUserSelf(t_dstHost, t_dstPort, t_dstAuthStr):
         exit() # bail
 
     t_userInfo = r.json()
-    
+
     return t_userInfo
 
 def getDstUsersAll(t_dstHost, t_dstPort, t_dstAuthStr):
@@ -557,8 +557,8 @@ def getDstUsersAll(t_dstHost, t_dstPort, t_dstAuthStr):
 # all users on CM.
 # -----------------------------------------------------------------------------
 
-    t_dstRESTUserMgmtSelf   = DST_REST_PREAMBLE + "usermgmt/users" 
-        
+    t_dstRESTUserMgmtSelf   = DST_REST_PREAMBLE + "usermgmt/users"
+
     t_dstHostRESTCmd    = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTUserMgmtSelf)
     t_dstHeaders        = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
 
@@ -570,7 +570,7 @@ def getDstUsersAll(t_dstHost, t_dstPort, t_dstAuthStr):
         exit()
 
     t_userInfo = r.json()
-    
+
     return t_userInfo
 
 def getDstGroupsAll(t_dstHost, t_dstPort, t_dstAuthStr):
@@ -578,8 +578,8 @@ def getDstGroupsAll(t_dstHost, t_dstPort, t_dstAuthStr):
 # REST Assembly for collecting groups on CM.
 # -----------------------------------------------------------------------------
 
-    t_dstRESTURI   = DST_REST_PREAMBLE + "usermgmt/groups/?limit=1000" 
-        
+    t_dstRESTURI   = DST_REST_PREAMBLE + "usermgmt/groups/?limit=1000"
+
     t_dstHostRESTCmd    = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTURI)
     t_dstHeaders        = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
 
@@ -591,7 +591,7 @@ def getDstGroupsAll(t_dstHost, t_dstPort, t_dstAuthStr):
         exit()
 
     t_Info = r.json()
-    
+
     return t_Info
 
 def createDstUsrGroup(t_dstHost, t_dstPort, t_dstAuthStr, t_usrGroup):
@@ -599,14 +599,14 @@ def createDstUsrGroup(t_dstHost, t_dstPort, t_dstAuthStr, t_usrGroup):
 # REST Assembly for creating a new user group
 # -----------------------------------------------------------------------------
 
-    t_dstRESTURI   = DST_REST_PREAMBLE + "usermgmt/groups" 
-        
+    t_dstRESTURI   = DST_REST_PREAMBLE + "usermgmt/groups"
+
     t_dstHostRESTCmd    = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTURI)
     t_dstHeaders        = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
 
     t_dstBody               = {"name":t_usrGroup}
     r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_dstBody), headers=t_dstHeaders, verify=False)
-    
+
     if(r.status_code != STATUS_CODE_CREATED):
         print("createDstUsrGroup:", r)
         kPrintError("createDstUsrGroup", r)
@@ -615,7 +615,7 @@ def createDstUsrGroup(t_dstHost, t_dstPort, t_dstAuthStr, t_usrGroup):
         print(" ", t_usrGroup, "has been created.")
 
     t_Info = r.json()
-    
+
     return t_Info
 
 def addDstUsrToGroup(t_dstHost, t_dstPort, t_dstAuthStr, t_userName, t_userID, t_usrGroup):
@@ -623,16 +623,16 @@ def addDstUsrToGroup(t_dstHost, t_dstPort, t_dstAuthStr, t_userName, t_userID, t
 # REST Assembly for creating a new user group
 # -----------------------------------------------------------------------------
 
-    t_dstRESTURI   = DST_REST_PREAMBLE + "usermgmt/groups" 
-        
+    t_dstRESTURI   = DST_REST_PREAMBLE + "usermgmt/groups"
+
     t_grpAndUsrURIExt   = "/%s/users/%s" %(t_usrGroup, t_userID)
     t_dstHostRESTCmd    = "https://%s:%s%s%s" \
                         %(t_dstHost, t_dstPort, t_dstRESTURI, t_grpAndUsrURIExt)
-        
+
     t_dstHeaders        = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
 
     r = requests.post(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
-    
+
     if(r.status_code != STATUS_CODE_OK):
         print("addDstUsrToGroup:", r)
         kPrintError("addDstUsrToGroup", r)
@@ -641,7 +641,7 @@ def addDstUsrToGroup(t_dstHost, t_dstPort, t_dstAuthStr, t_userName, t_userID, t
         print(" ", t_userName, "has been added to the", t_usrGroup, "group.")
 
     t_Info = r.json()
-    
+
     return t_Info
 
 def getDstKeyByName(t_dstHost, t_dstPort, t_dstAuthStr, t_dstKeyName):
@@ -649,12 +649,12 @@ def getDstKeyByName(t_dstHost, t_dstPort, t_dstAuthStr, t_dstKeyName):
 # REST Assembly for READING specific Object Data from DESTINATION HOST
 #
 # Using the VAULT/KEYS2 API above, the dst host delivers all but the actual
-# key block of object.  This section returns and collects the key block for 
+# key block of object.  This section returns and collects the key block for
 # each object.
 # -----------------------------------------------------------------------------
 
     t_dstRESTAPI               = DST_REST_PREAMBLE + "vault/keys2/?name="
-    
+
     t_dstHostRESTCmd = "https://%s:%s%s%s" %(t_dstHost, t_dstPort, t_dstRESTAPI, t_dstKeyName)
     t_dstHeaders = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
 
@@ -665,7 +665,7 @@ def getDstKeyByName(t_dstHost, t_dstPort, t_dstAuthStr, t_dstKeyName):
         kPrintError("getDstKeyByName", r)
 
     t_data      = r.json()[CMAttributeType.RESOURCES.value][0]
-    
+
     return t_data
 
 def addDataObjectToGroup(t_dstHost, t_dstPort, t_dstGrp, t_dstAuthStr, t_xKeyObj):
@@ -680,21 +680,21 @@ def addDataObjectToGroup(t_dstHost, t_dstPort, t_dstGrp, t_dstAuthStr, t_xKeyObj
 
     t_alias = str(t_xKeyObj[CMAttributeType.ALIASES.value][0][CMAliasesAttribute.ALIAS.value])
     t_keyID = str(t_xKeyObj[CMAttributeType.ID.value])
-    
+
     t_dstHostRESTCmd = "https://%s:%s%s/%s?type=id" %(t_dstHost, t_dstPort, t_dstRESTAPI, t_keyID)
     t_dstHeaders = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
-    
-    # In order to assign a key to a Group, you need to provide the key 
-    # alias (which is the same thing as the name) and the Group name.
-    
 
-    # You need to update (patch) the object twice:  once to clear the 
-    # alias (index 0) and a second time to re-add the alias along 
+    # In order to assign a key to a Group, you need to provide the key
+    # alias (which is the same thing as the name) and the Group name.
+
+
+    # You need to update (patch) the object twice:  once to clear the
+    # alias (index 0) and a second time to re-add the alias along
     # with the permissions (no index specified).
-    
+
     t_keyEmptyAliasData = CMKeyEmptyAliasData()
     t_body              = t_keyEmptyAliasData.payload
-    
+
     r = requests.patch(t_dstHostRESTCmd, data=json.dumps(t_body), headers=t_dstHeaders, verify=False)
 
     # If clearomg of the alias information is successful, then proceed
@@ -702,9 +702,9 @@ def addDataObjectToGroup(t_dstHost, t_dstPort, t_dstGrp, t_dstAuthStr, t_xKeyObj
     # group assignment)
     t_success = True
     if(r.status_code == STATUS_CODE_OK):
-        t_Response      = r.json()        
+        t_Response      = r.json()
         print("  ->Object Alias Data Cleared: ", t_alias)
-        
+
         t_keyMetaData   = CMKeyNewMetaData(t_alias, t_dstGrp)
         t_body          = t_keyMetaData.payload
 
@@ -712,14 +712,14 @@ def addDataObjectToGroup(t_dstHost, t_dstPort, t_dstGrp, t_dstAuthStr, t_xKeyObj
 
         t_success = True
         if(r.status_code == STATUS_CODE_OK):
-            t_Response      = r.json()        
+            t_Response      = r.json()
             print("  ->Object Added to Group: ", t_alias)
         else:
-            kPrintError("addDataObjectToGroup-full", r)        
-            t_success = False         
-        
+            kPrintError("addDataObjectToGroup-full", r)
+            t_success = False
+
     else:
-        kPrintError("addDataObjectToGroup-clear", r)        
+        kPrintError("addDataObjectToGroup-clear", r)
         t_success = False
-    
+
     return t_success

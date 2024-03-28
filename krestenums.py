@@ -11,24 +11,24 @@ class ObjectType(enum.Enum):
     PUBLIC_KEY          = 0x00000003
     PRIVATE_KEY         = 0x00000004
     SPLIT_KEY           = 0x00000005
-    TEMPLATE            = 0x00000006 
+    TEMPLATE            = 0x00000006
     SECRET_DATA         = 0x00000007
     OPAQUE_DATA         = 0x00000008
     PGP_KEY             = 0x00000009
     CERTIFICATE_REQUEST = 0x0000000A
-    
+
 class ObjectTypeName(enum.Enum):
     CERTIFICATE         = 'CERTIFICATE'
     SYMMETRIC_KEY       = 'SYMMETRIC KEY'
     PUBLIC_KEY          = 'PUBLIC_KEY'
     PRIVATE_KEY         = 'PRIVATE_KEY'
     SPLIT_KEY           = 'SPLIT_KEY'
-    TEMPLATE            = 'TEMPLATE' 
+    TEMPLATE            = 'TEMPLATE'
     SECRET_DATA         = 'SECRET_DATA'
     OPAQUE_DATA         = 'OPAQUE_DATA'
     PGP_KEY             = 'PGP_KEY'
     CERTIFICATE_REQUEST = 'CERTIFICATE_REQUEST'
-    
+
 class CryptographicUsageMask(enum.Enum):
     # KMIP 1.0
     SIGN                = 0x00000001
@@ -55,8 +55,8 @@ class CryptographicUsageMask(enum.Enum):
     AUTHENTICATE        = 0x00100000
     UNRESTRICTED        = 0x00200000
     FPE_ENCRYPT         = 0x00400000
-    FPE_DECRYPT         = 0x00800000    
-    
+    FPE_DECRYPT         = 0x00800000
+
 class GKLMAttributeType(enum.Enum):
     UUID                        = 'uuid'
     INFORMATION                 = 'information'
@@ -98,7 +98,7 @@ class GKLMAttributeType(enum.Enum):
     KEY_BLOCK                   = "KEY_BLOCK"
     KEY_MATERIAL                = "KEY_MATERIAL"
     KEY_FORMAT                  = "KEY_FORMAT"
-    
+
 class CMAttributeType(enum.Enum):
     ID                          = 'id'
     URI                         = 'uri'
@@ -137,28 +137,28 @@ class CMAliasesAttribute(enum.Enum):
     ALIAS                       = 'alias'
     TYPE                        = 'type'
     INDEX                       = 'index'
-    
-class CMUserAttribute(enum.Enum):    
+
+class CMUserAttribute(enum.Enum):
     NAME                        = 'name'
     NICKNAME                    = 'nickname'
     USER_ID                     = 'user_id'
-        
+
 class listOnlyOption(enum.Enum):
     NEITHER                     = 'NEITHER'
     SOURCE                      = 'SOURCE'
     DESTINATION                 = 'DESTINATION'
     BOTH                        = 'BOTH'
-    
+
 class NetAppAttribute(enum.Enum):
     NODEID                      = 'x-NETAPP-NodeId'
     CLUSTERNAME                 = 'x-NETAPP-ClusterName'
     VSERVERID                   = 'x-NETAPP-VserverId'
-    
-class CMMetaAttribute(enum.Enum):    
+
+class CMMetaAttribute(enum.Enum):
     OWNER_ID                    = 'ownerId'
     GROUP_PERMISSIONS           = 'permissions'
 
-class CMMetaGroupPermissions(enum.Enum):    
+class CMMetaGroupPermissions(enum.Enum):
     USE_KEY                     = 'UseKey'
     READ_KEY                    = 'ReadKey'
     EXPORT_KEY                  = 'ExportKey'
@@ -167,7 +167,7 @@ class CMMetaGroupPermissions(enum.Enum):
     DECRYPT                     = 'DecryptWithKey'
     ENCRYPT                     = 'EncryptWithKey'
     SIGN_VERIFY                 = 'SignVerifyWithKey'
-    
+
 class CMUserGroup:
     def __init__(self, name, member, description=None):
         self.name               = name
@@ -178,7 +178,7 @@ class CMKeyNewMetaData:
     def __init__(self, t_alias, t_group):
         self.alias              = t_alias
         self.group              = t_group
-        
+
         self.permissions        = {}
         self.permissions.update({"UseKey":              [t_group]})
         self.permissions.update({"ReadKey":             [t_group]})
@@ -188,14 +188,14 @@ class CMKeyNewMetaData:
         self.permissions.update({"DecryptWithKey":      [t_group]})
         self.permissions.update({"EncryptWithKey":      [t_group]})
         self.permissions.update({"SignVerifyWithKey":   [t_group]})
-        
+
         self.meta               = {"permissions":self.permissions}
         self.aliases            = [{"alias":t_alias, "type":"string"}]
         self.allVersions        = True
-        
+
         self.payload            = {"meta": self.meta, "aliases":self.aliases, "allVersions": self.allVersions}
-    
+
 class CMKeyEmptyAliasData:
     def __init__(self):
         self.aliases            = [{"alias":"", "index":0}]
-        self.payload            = {"aliases":self.aliases}    
+        self.payload            = {"aliases":self.aliases}
