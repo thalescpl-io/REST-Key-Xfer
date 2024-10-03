@@ -29,13 +29,13 @@ __srcuuid:__    (optional)
             Limits reads or copyies from the Source Server to only those keys whose UUIDs contain all or part of the SRCUUID string
 
 __netAppNodeID:__   (optional)
-            NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copyies from the Source Server to only those keys contain a NetApp-specific KMIP attribute NODEID and contain all or part of the NODEID string.
+            NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copies from the Source Server to only those keys contain a NetApp-specific KMIP attribute x-NETAPP-NodeId and contain all or part of the NODEID string.
 
 __netAppClusterName:__  (optional)
-            NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copyies from the Source Server to only those keys contain a NetApp-specific KMIP attribute NODENAME and contain all or part of the NODENAME string.
+            NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copies from the Source Server to only those keys contain a NetApp-specific KMIP attribute x-NETAPP-ClusterName and contain all or part of the NODENAME string.
             
 __netAppVserverID:__    (optional)
-            NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copyies from the Source Server to only those keys contain a NetApp-specific KMIP attribute NODENAME and contain all or part of the NODENAME string.            
+            NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copies from the Source Server to only those keys contain a NetApp-specific KMIP attribute x-NETAPP-VserverId and contain all or part of the NODENAME string.            
 __Note that srcuuid, netAppNodeID, netAppClusterName, and netAppVserverID are optional, independent flags.  But when included, their filters are combined so that all criteria are applied when selecting the source keys.__
 
 __dstUserGroupName:__    (optional)
