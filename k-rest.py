@@ -78,6 +78,11 @@ srcNetAppVserverID = ""   #set default to a zero length string
 parser.add_argument("-dstUserGroupName", nargs=1, action="store", dest="dstUserGroupName", required=False)
 dstUserGroupName = ""   #set default to a zero length string
 
+parser.add_argument("-srcClientName", nargs=1, action="store", dest="srcClientName", required=False)
+srcClientName = ""   #set default to a zero length string
+
+parser.add_argument("-listSrcClients", action="store_true", dest="listSrcClients", required=False)
+listSrcClients = False   #set default to be false
 
 # Args are returned as a LIST.  Separate them into individual strings
 args = parser.parse_args()
@@ -100,7 +105,6 @@ dstUser = str(" ".join(args.dstUser))
 dstPass = str(" ".join(args.dstPass))
 tmpStr = " DstHost: %s\n DstPort: %s\n DstUser: %s\n" %(dstHost, dstPort, dstUser)
 print(tmpStr)
-
 
 # ------------- Group Management ------------------------------------
 # If a Group is specified, then capture the group name and check to 
@@ -164,6 +168,16 @@ if args.srcNAVserverID is not None:
 # DEBUG - this is a custom attribute that appears occastionally for non-NetApp objects
 # srcNetAppFilterDict['y-RNGSimulation'] = 'Qg'
 
+# ------------- Source Client ------------------------------------
+# Set the client information if it is specified
+# -------------------------------------------------------------------
+if args.srcClientName is not None:
+    srcClientName = str(" ".join(args.srcClientName))
+    print(" Source Client Name:", srcClientName)
+
+if args.listSrcClients:
+    listSrcClients = True
+
 # ---- PARSING COMPLETE ----------------------------------------------------------
 
 # ################################################################################
@@ -178,19 +192,67 @@ if listOnly != listOnlyOption.DESTINATION.value:
     print("  * Source Access Confirmed *")
     tmpStr = "    Username: %s\n" %(srcUser)
     print(tmpStr)
-    
-# Get list of Source Keys
-    srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
-    srcKeyListCnt   = len(srcKeyList)
 
-# Get detailed information, including key material, for each key/object.
-# The returned list is a COMPLETE package of key attributes and key material for
-# each object.
-#
-# Note that we have now added the ability to specify a UUID.
-    srcKeyObjDataList   = getSrcKeyObjDataList(srcHost, srcPort, srcKeyList, srcAuthStr, srcUUID)
+# ------------- Source Client Information ---------------------------
+# If a list of clients is requested, then provide it.
+# -------------------------------------------------------------------
+    clientList = getSrcClients(srcHost, srcPort, srcAuthStr)
+    listLen = len(clientList)
+    srcClientFound = False
+    srcClientKeyCount = 0
 
-# If the length of the NetApp filter (dictionary) is greater than zero, apply NetApp filter.
+    if listSrcClients:  # if user wants a list of available clients, provide it
+        tmpStr = "    Available Source Clients (%s): " %(listLen)
+        print(tmpStr)
+        for client in range(listLen):
+            t_clientName = clientList[client][GKLMAttributeType.CLIENT_NAME.value]
+            t_symKeyCount = 0
+            # Now check for the presents of any objects for the client
+            if GKLMAttributeType.OBJECT_COUNT.value in clientList[client].keys():
+
+                # Now since the client has objects, check for the presence of any SYMMETRIC KEYS.
+                if GKLMAttributeType.SYMMETRIC_KEY.value in clientList[client][GKLMAttributeType.OBJECT_COUNT.value].keys():
+                    t_symKeyCount = clientList[client][GKLMAttributeType.OBJECT_COUNT.value][GKLMAttributeType.SYMMETRIC_KEY.value]
+
+            tmpStr = "      %s contains %s Exportable Symmetric Keys" %(t_clientName, t_symKeyCount)
+            print(tmpStr)
+
+            # Aftewards, if a client name is specified, then check to ensure it is present.
+            if len(srcClientName) > 0: # if client name was specified, search for it
+                if srcClientName == t_clientName:
+                    srcClientFound = True
+                    srcClientKeyCount = t_symKeyCount
+
+    # Once list of clients has been parse, if the srcClientName was specified but it is not present (or has no keys),
+    # then bail and make the user coorect and resubmit the command.
+    if len(srcClientName) > 0: 
+        if srcClientFound == False:
+            tmpStr = "\n    ERROR: Client Name %s not found in list of available clients. Please try again." %(srcClientName)
+            print(tmpStr)
+            exit()
+        elif srcClientKeyCount == 0:
+            tmpStr = "\n    ERROR: Client Name %s was found in list of available clients, but does not contain any SYMMETRIC keys. Please try again." %(srcClientName)
+            print(tmpStr)
+            exit()
+        else:
+            tmpStr = "\n    Client Name %s was found in list of available clients and contains %s SYMMETRIC keys. " %(srcClientName, srcClientKeyCount)
+            print(tmpStr)            
+
+    # Let's go get some key information from the source
+    # If the srcClientName has been specified, only search for those keys.  It is faster.
+    # Get detailed information, including key material, for each key/object.
+    # The returned list is a COMPLETE package of key attributes and key material for
+    # each object.
+    srcKeyObjDataList   = getSrcKeyObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, srcClientName)
+    srcKeyListCnt       = len(srcKeyObjDataList)
+
+    # If no srcClientName has been provided, the above ObjDataList will still be retrieved, but now lets get all of the 
+    # objects stored on the host (just for the count)
+    if len(srcClientName) == 0: 
+        srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
+        srcKeyListCnt   = len(srcKeyList)
+
+    # If the length of the NetApp filter (dictionary) is greater than zero, apply NetApp filter.
     if len(srcNetAppFilterDict) > 0:
         t_srcFilteredList = filterNetAppSrcKeyObjDataList(srcKeyObjDataList, srcNetAppFilterDict)
         srcKeyObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
@@ -198,8 +260,8 @@ if listOnly != listOnlyOption.DESTINATION.value:
     srcKeyObjCnt        = len(srcKeyObjDataList)
         
     if listOnly != listOnlyOption.DESTINATION.value:
-        print("\nNumber of Src List Keys: ", srcKeyListCnt)
-        print("Number of filtered and exportable Src Key Objects: ", srcKeyObjCnt)
+        print("\n Number of Src List Keys: ", srcKeyListCnt)
+        print(" Number of filtered and exportable Src Key Objects: ", srcKeyObjCnt)
         printSrcKeyObjDataList(srcKeyObjDataList)
 
         print("\n --- SRC KEY OBJECT RETRIEVAL COMPLETE --- \n")

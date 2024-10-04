@@ -179,58 +179,75 @@ def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
             exit()
 
         t_data          = r.json()
-        t_srcKeyData.append(t_data)     # Add data to list
+        t_srcKeyDataList.append(t_data)     # Add data to list
 
-        print("Src Key ", obj, " Alias:", t_srcKeyData[obj][GKLMAttributeType.ALIAS.value])
+        print("Src Key ", obj, " Alias:", t_srcKeyDataList[obj][GKLMAttributeType.ALIAS.value])
         
     return t_srcKeyDataList
 
-def getSrcKeyObjDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr, t_suuid):
+
+def getSrcKeyObjDataListByClient(t_srcHost, t_srcPort, t_srcAuthStr, t_suuid, t_client):
 # -----------------------------------------------------------------------------
 # REST Assembly for reading specific Key Data via OBJECT
 #
-# Using the getSrcKeyList API above, the src host delivers all BUT the actual
-# key block of a key.  This section returns and collects the key block for 
-# each key by collecting them from the OBJECT REST API.
+# This code is the same as the code in getSrcKeyObjDataList with the addition
+# of a parameter that specifies the client name.  The reason for this is because
+# SKLM will allow KMIP clients to create keys without associating them to an SKLM User.
+# When we attempt to retrieve any key that is not associated with a user, we get
+# error message.  HOWEVER, if we specify the client name in the request, the 
+# error is avoided.
 # -----------------------------------------------------------------------------
     
-    t_srcRESTKeyObjects = SRC_REST_PREAMBLE + "objects"
-    t_ListLen           = len(t_srcKeyList)
+    if len(t_client) > 0:
+        t_srcRESTKeyObjects = SRC_REST_PREAMBLE + "objects?clientName=" + t_client
+    else:
+        t_srcRESTKeyObjects = SRC_REST_PREAMBLE + "objects"
+
+    t_srcRESTKeyObjectDetail = SRC_REST_PREAMBLE + "objects"
 
     t_srcKeyObjDataList = [] # created list to be returned later
     t_cnt               = 0  # keep track of the number of exportable key objects
 
-    for obj in range(t_ListLen):
-        
-        # Separate string conversions before sending.  Python gets confused if they are all converted as part of the string assembly of tmpStr
-        
-        t_owner         = str(t_srcKeyList[obj][GKLMAttributeType.OWNER.value])
-        t_kt            = str(t_srcKeyList[obj][GKLMAttributeType.KEY_TYPE.value])
-        t_srcObjID      = t_srcKeyList[obj][GKLMAttributeType.UUID.value]
-        t_srcObjAlias   = t_srcKeyList[obj][GKLMAttributeType.ALIAS.value]
-        
-        t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjects, t_srcObjID)
-        t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
-        
-        # Note that REST Command does not require a body object in this GET REST Command
-        # Also, only process SYMMETRIC_KEYS
-            
-        if (t_kt == ObjectType.SYMMETRIC_KEY.name and len(t_owner) > 1):        
-            r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
-            if(r.status_code != STATUS_CODE_OK):
-                kPrintError("getSrcKeyObjDataList", r)
-                continue
+    t_srcHostRESTCmd = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjects)
+    t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
 
-            elif len(t_suuid) == 0: # add data unless a specific UUID is specified
-                t_data   = r.json()['managedObject']
-                t_srcKeyObjDataList.append(t_data)     # Add data to list
-                t_cnt += 1  # increment object count
+    # now that everything is organized, go get the list of key objects from SKLM
+    r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        kPrintError("getSrcKeyObjDataListByClient", r)
+    else:
+        t_keyObjects   = r.json()['managedObject']  # contains list of objects but not include key block
+        t_ListLen           = len(t_keyObjects)
+
+        # Go through the list of objects and retrieve the key material AND key block.  The key block
+        # can ONLY be obtained by explicity specifing the UUID of the key from the REST endpoint.
+        # Therefore, you need to retreive EACH key by its UUID.
+
+        for obj in range(t_ListLen):
+            t_kt            = str(t_keyObjects[obj][GKLMAttributeType.KEY_TYPE.value])
+            t_srcObjID      = t_keyObjects[obj][GKLMAttributeType.UUID.value]
+            t_srcObjAlias   = t_keyObjects[obj][GKLMAttributeType.ALIAS.value]
+
+            t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjectDetail, t_srcObjID)
+            t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
+
+            # Only retreive SYMMETRIC_KEYS
+            
+            if (t_kt == ObjectType.SYMMETRIC_KEY.name):        
+                r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+                if(r.status_code != STATUS_CODE_OK):
+                    kPrintError("getSrcKeyObjDataList", r)
+                    continue
+
+                elif len(t_suuid) == 0: # add data unless a specific UUID is specified
+                    t_data   = r.json()['managedObject']
+                    t_srcKeyObjDataList.append(t_data)     # Add data to list
+                    t_cnt += 1  # increment object count
                 
-            elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
-                t_data   = r.json()['managedObject']
-                t_srcKeyObjDataList.append(t_data)     # Add data to list
-                t_cnt += 1  # increment object count
-    
+                elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
+                    t_data   = r.json()['managedObject']
+                    t_srcKeyObjDataList.append(t_data)     # Add data to list
+
     return t_srcKeyObjDataList
 
 def printSrcKeyList(t_srcKeyList):
@@ -661,7 +678,7 @@ def getDstKeyByName(t_dstHost, t_dstPort, t_dstAuthStr, t_dstKeyName):
     # Note that REST Command does not require a body object in this GET REST Command
     r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
-        print("  Obj ID:", dstObjID)
+        print("  dstKeyNme:", t_dstKeyName)
         kPrintError("getDstKeyByName", r)
 
     t_data      = r.json()[CMAttributeType.RESOURCES.value][0]
@@ -723,3 +740,27 @@ def addDataObjectToGroup(t_dstHost, t_dstPort, t_dstGrp, t_dstAuthStr, t_xKeyObj
         t_success = False
     
     return t_success
+
+def getSrcClients(t_srcHost, t_srcPort, t_srcAuthStr):
+# -----------------------------------------------------------------------------
+# REST Assembly for obtaining a list of availabvle clients on the Source Server
+# 
+# This feature is helpful in determing which clients are available.
+# -----------------------------------------------------------------------------
+
+    t_srcRESTCmd            = SRC_REST_PREAMBLE + "clients"
+    t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTCmd)   
+
+    t_srcHeaders            = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization": t_srcAuthStr}
+
+    # Note that this REST Command does not require a body object in this GET REST Command
+    r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+
+    if(r.status_code != STATUS_CODE_OK):
+        kPrintError("getSrcClients", r)
+        exit()
+
+    t_clientList           = r.json()[GKLMAttributeType.CLIENT.value]
+    
+      
+    return t_clientList

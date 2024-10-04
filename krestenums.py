@@ -98,6 +98,10 @@ class GKLMAttributeType(enum.Enum):
     KEY_BLOCK                   = "KEY_BLOCK"
     KEY_MATERIAL                = "KEY_MATERIAL"
     KEY_FORMAT                  = "KEY_FORMAT"
+    CLIENT                      = "client"
+    CLIENT_NAME                 = "clientName"
+    OBJECT_COUNT                = "objectCount"
+    SYMMETRIC_KEY               = "SYMMETRIC_KEY"   # Note that this attribute is written differently than a key type
     
 class CMAttributeType(enum.Enum):
     ID                          = 'id'

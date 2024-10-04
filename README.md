@@ -26,7 +26,13 @@ __ListOnly:__   (optional)
             BOTH - Only Read and List Keys on Source and Destination Server.  No writes are made to Destination Server
             
 __srcuuid:__    (optional)
-            Limits reads or copyies from the Source Server to only those keys whose UUIDs contain all or part of the SRCUUID string
+            Limits reads or copies from the Source Server to only those keys whose UUIDs contain all or part of the SRCUUID string
+
+__srcClientName:__    (optional)
+            Limits reads or copies from the Source Server to only those keys that belong to a specific KMIP client.  Partial name allowed.
+
+__listSrcClients:__    (optional)
+            Lists clients that are available on the Source Server.
 
 __netAppNodeID:__   (optional)
             NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copies from the Source Server to only those keys contain a NetApp-specific KMIP attribute x-NETAPP-NodeId and contain all or part of the NODEID string.
@@ -36,11 +42,11 @@ __netAppClusterName:__  (optional)
             
 __netAppVserverID:__    (optional)
             NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copies from the Source Server to only those keys contain a NetApp-specific KMIP attribute x-NETAPP-VserverId and contain all or part of the NODENAME string.            
-__Note that srcuuid, netAppNodeID, netAppClusterName, and netAppVserverID are optional, independent flags.  But when included, their filters are combined so that all criteria are applied when selecting the source keys.__
 
 __dstUserGroupName:__    (optional)
             Desitination Group Name.  When supplied, keys written to the destination are also accessible by memembers of this group.  If the group does not originally exist, it is created and the dstUser is automatically added to the group on the destination server.
 
+__Note:__ The paramters above are independent.  But when included, their filters are combined so that all criteria are applied when selecting the source keys. 
 
 __Additional Notes:__
 
