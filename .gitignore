@@ -1,3 +1,7 @@
 
 *.txt
 *.pyc
+/.vs/REST-Key-Xfer/FileContentIndex
+/.vs/REST-Key-Xfer/v17
+/.vs
+/.gitignore
