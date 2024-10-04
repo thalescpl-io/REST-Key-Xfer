@@ -5,7 +5,7 @@ The file k-rest.py is the "main" file for this application.
 
 *krest.bat and k-rest.sh have also been created to simplify execution of the application and include all of the paramters.*
 
-__usage:__ k-rest.py [-h] -srcHost SRCHOST [-srcPort SRCPORT] -srcUser SRCUSER -srcPass SRCPASS -dstHost DSTHOST [-dstPort DSTPORT] -dstUser DSTUSER -dstPass DSTPASS [-listOnly {NEITHER,SOURCE,DESTINATION,BOTH}] [-srcuuid SRCUUID] [-netAppNodeID NODEID] [-netAppClusterName NODENAME] [-netAppVserverID VSID] [--dstUserGroupName GROUPNAME]
+__usage:__ k-rest.py [-h] -srcHost SRCHOST [-srcPort SRCPORT] -srcUser SRCUSER -srcPass SRCPASS -dstHost DSTHOST [-dstPort DSTPORT] -dstUser DSTUSER -dstPass DSTPASS [-listOnly {NEITHER,SOURCE,DESTINATION,BOTH}] [-srcuuid SRCUUID] [--srcClientName SOURCECLIENTNAME] [--listSrcClients] [-netAppNodeID NODEID] [-netAppClusterName NODENAME] [-netAppVserverID VSID] [--dstUserGroupName GROUPNAME]
 
 __Arguments:__
 
