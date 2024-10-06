@@ -102,6 +102,7 @@ class GKLMAttributeType(enum.Enum):
     CLIENT_NAME                 = "clientName"
     OBJECT_COUNT                = "objectCount"
     SYMMETRIC_KEY               = "SYMMETRIC_KEY"   # Note that this attribute is written differently than a key type
+    CLIENT_USERS                = "users"           # this is the user assigned to the client
     
 class CMAttributeType(enum.Enum):
     ID                          = 'id'

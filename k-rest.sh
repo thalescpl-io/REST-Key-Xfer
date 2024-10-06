@@ -4,6 +4,8 @@
 #
 # This is sample script file for demonstration purposes only.
 #
+# Please see README file at https://github.com/thalescpl-io/REST-Key-Xfer for a detailed explaination of the parameters.
+#
 python3 k-rest.py \
 -srcHost xklm.test256.io \
 -srcUser SKLMAdmin -srcPass Thales_4567 \

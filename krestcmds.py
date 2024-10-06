@@ -219,6 +219,7 @@ def getSrcKeyObjDataListByClient(t_srcHost, t_srcPort, t_srcAuthStr, t_suuid, t_
         t_keyObjects   = r.json()['managedObject']  # contains list of objects but not include key block
         t_ListLen           = len(t_keyObjects)
 
+
         # Go through the list of objects and retrieve the key material AND key block.  The key block
         # can ONLY be obtained by explicity specifing the UUID of the key from the REST endpoint.
         # Therefore, you need to retreive EACH key by its UUID.
@@ -236,18 +237,21 @@ def getSrcKeyObjDataListByClient(t_srcHost, t_srcPort, t_srcAuthStr, t_suuid, t_
             if (t_kt == ObjectType.SYMMETRIC_KEY.name):        
                 r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
                 if(r.status_code != STATUS_CODE_OK):
-                    kPrintError("getSrcKeyObjDataList", r)
-                    continue
+                    kPrintError("getSrcKeyObjDataListByClient2", r)
+                    break   # stop proccessing the objects.
 
                 elif len(t_suuid) == 0: # add data unless a specific UUID is specified
                     t_data   = r.json()['managedObject']
+                    t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
                     t_srcKeyObjDataList.append(t_data)     # Add data to list
                     t_cnt += 1  # increment object count
                 
                 elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
                     t_data   = r.json()['managedObject']
+                    t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
                     t_srcKeyObjDataList.append(t_data)     # Add data to list
 
+    # printJList("srcKeyObjDataList:", t_srcKeyObjDataList)
     return t_srcKeyObjDataList
 
 def printSrcKeyList(t_srcKeyList):
@@ -267,14 +271,13 @@ def printSrcKeyList(t_srcKeyList):
         t_uuid  = str(t_srcKeyList[obj][GKLMAttributeType.UUID.value])
         t_ksn   = str(t_srcKeyList[obj][GKLMAttributeType.KEY_STORE_NAME.value])
         t_ksu   = str(t_srcKeyList[obj][GKLMAttributeType.KEY_STORE_UUID.value])
-        t_owner = str(t_srcKeyList[obj][GKLMAttributeType.OWNER.value])
         t_usage = str(t_srcKeyList[obj][GKLMAttributeType.USAGE.value])
         t_kt    = str(t_srcKeyList[obj][GKLMAttributeType.KEY_TYPE.value])
         
         tmpStr =    "\nSrc Key List Info: %s Alias: %s UUID: %s"    \
                     "\n  Key Store Name: %s Key Store UUID: %s"  \
-                    "\n  Owner: %s\n  Usage: %s Key Type: %s" \
-                    %(obj, t_alias, t_uuid, t_ksn, t_ksu, t_owner, t_usage, t_kt)
+                    "\n  Usage: %s Key Type: %s" \
+                    %(obj, t_alias, t_uuid, t_ksn, t_ksu, t_usage, t_kt)
 
         print(tmpStr)
     return t_success
@@ -298,8 +301,8 @@ def convertGKLMHashToString(t_GKLMHash):
     t_startPos  = t_GKLMHash.find(t_Header)
     t_endPos    = t_GKLMHash.find(t_Trailer)
     
-    tmpStr1  = t_GKLMHash[t_startPos+t_sizeH:t_endPos]
-    tmpStr2 = re.sub(t_chars, "", tmpStr1)
+    tmpStr1     = t_GKLMHash[t_startPos+t_sizeH:t_endPos]
+    tmpStr2     = re.sub(t_chars, "", tmpStr1)
         
     return tmpStr2
 
@@ -316,16 +319,18 @@ def printSrcKeyObjDataList(t_srcKeyObjDataList):
         # Separate string conversions before sending.  
         # Python gets confused if they are all converted as part of the string assembly of tmpStr.  tmpStr.strip("[]")
         
-        t_alias = str(t_srcKeyObjDataList[obj][GKLMAttributeType.ALIAS.value])
-        t_uuid  = str(t_srcKeyObjDataList[obj][GKLMAttributeType.UUID.value])
-        t_kt     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.KEY_TYPE.value])
-        t_hv     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.DIGEST.value])
+        t_alias     = str(t_srcKeyObjDataList[obj][GKLMAttributeType.ALIAS.value])
+        t_uuid      = str(t_srcKeyObjDataList[obj][GKLMAttributeType.UUID.value])
+        t_kt        = str(t_srcKeyObjDataList[obj][GKLMAttributeType.KEY_TYPE.value])
+        t_hv        = str(t_srcKeyObjDataList[obj][GKLMAttributeType.DIGEST.value])
+        t_client    = str(t_srcKeyObjDataList[obj][GKLMAttributeType.CLIENT_NAME.value])
         
-        tmpStr =    "\nSrc Obj: %s Alias: %s" \
-                    "\n  UUID: %s"    \
-                    "\n  Key Type: %s " \
-                    "\n  Hash: %s" \
-                    %(obj, t_alias.strip("[]"), t_uuid, t_kt, convertGKLMHashToString(t_hv))
+        tmpStr =    "\nSrc Obj: %s Alias: %s"   \
+                    "\n  UUID: %s"              \
+                    "\n  Client Name: %s"       \
+                    "\n  Key Type: %s "         \
+                    "\n  Hash: %s"              \
+                    %(obj, t_alias.strip("[]"), t_uuid, t_client, t_kt, convertGKLMHashToString(t_hv))
 
         print(tmpStr)            
         
@@ -762,5 +767,44 @@ def getSrcClients(t_srcHost, t_srcPort, t_srcAuthStr):
 
     t_clientList           = r.json()[GKLMAttributeType.CLIENT.value]
     
-      
     return t_clientList
+
+def assignSrcClientUsers(t_srcHost, t_srcPort, t_srcAuthStr, t_client, t_userList):
+# -----------------------------------------------------------------------------
+# REST Assembly for assigning a user to a KMIP Client 
+# -----------------------------------------------------------------------------
+    t_srcRESTListObjects    = SRC_REST_PREAMBLE + "clients/" + t_client + "/assignUsers"
+    t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
+    t_srcHeaders            = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
+
+    t_srcBody               = {"users":t_userList}
+
+    t_success = True
+
+    # Note that this REST Command is a PUT command
+    r = requests.put(t_srcHostRESTCmd, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        kPrintError("assignSrcClientUsers", r)
+        exit()
+
+    return t_success
+
+def removeSrcClientUsers(t_srcHost, t_srcPort, t_srcAuthStr, t_client, t_userList):
+# -----------------------------------------------------------------------------
+# REST Assembly for removing a user to a KMIP Client 
+# -----------------------------------------------------------------------------
+    t_srcRESTListObjects    = SRC_REST_PREAMBLE + "clients/" + t_client + "/removeUsers"
+    t_srcHostRESTCmd        = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTListObjects)
+    t_srcHeaders            = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
+
+    t_srcBody               = {"users":t_userList}
+
+    t_success = True
+
+    # Note that this REST Command is a PUT command
+    r = requests.put(t_srcHostRESTCmd, data=json.dumps(t_srcBody), headers=t_srcHeaders, verify=False)
+    if(r.status_code != STATUS_CODE_OK):
+        kPrintError("assignSrcClientUsers", r)
+        exit()
+
+    return t_success
