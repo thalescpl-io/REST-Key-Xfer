@@ -35,7 +35,7 @@ __listSrcClients:__    (optional)
             Lists clients that are available on the Source Server.
 
 __resolveSrcClientOwnership:__    (optional)
-            In some instances, the source clients have no administrative ownership.  This command temporarly assigns ownership of the client to the srcUser for the purposes of completing the actions of key copying and the returns the client ownership to its original configuration.  The srcUser must have _klmClientUser_ permissions in the source server to use this feature.
+            In some instances, the source clients have no administrative ownership.  This command temporarly assigns ownership of the client to the srcUser for the purposes of completing the actions of key copying and the returns the client ownership to its original configuration.  The srcUser must have the _klmClientUser_ role and be a member of the _klmSecurityOfficerGroup_ group in the source server to use this feature.
 
 __netAppNodeID:__   (optional)
             NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copies from the Source Server to only those keys contain a NetApp-specific KMIP attribute x-NETAPP-NodeId and contain all or part of the NODEID string.
