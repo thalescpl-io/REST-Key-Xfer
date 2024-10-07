@@ -295,21 +295,12 @@ if listOnly != listOnlyOption.DESTINATION.value:
             tmpStr = "\n    Client Name %s was found in list of available clients and contains %s SYMMETRIC keys. " %(srcClientName, srcClientKeyCount)
             print(tmpStr)            
 
-    # After iterating through all of the clients in the source, report the total of all key material in the list
-    # srcKeyListCnt       = len(srcKeyObjDataList)
-
-    # If no srcClientName has been provided, the above ObjDataList will still be retrieved, but now lets get all of the 
-    # objects stored on the host (just for the count)
-    # if len(srcClientName) == 0: 
-    #    srcKeyList      = getSrcKeyList(srcHost, srcPort, srcAuthStr)
-    #    srcKeyListCnt   = len(srcKeyList)
-        # printJList("srcKeyList:", srcKeyList)
-
     # If the length of the NetApp filter (dictionary) is greater than zero, apply NetApp filter.
     if len(srcNetAppFilterDict) > 0:
         t_srcFilteredList = filterNetAppSrcKeyObjDataList(srcKeyObjDataList, srcNetAppFilterDict)
         srcKeyObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
+    # After iterating through all of the clients in the source, report the total of all key material in the list
     srcKeyObjCnt        = len(srcKeyObjDataList)
 
 
@@ -450,11 +441,6 @@ if listOnly != listOnlyOption.SOURCE.value:
     
     print("\n --- DST OBJECT RETRIEVAL COMPLETE --- \n")
     
-
-   
-
-        
-        
 
 #####################################################################################
 #

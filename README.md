@@ -29,7 +29,7 @@ __srcuuid:__    (optional)
             Limits reads or copies from the Source Server to only those keys whose UUIDs contain all or part of the SRCUUID string
 
 __srcClientName:__    (optional)
-            Limits reads or copies from the Source Server to only those keys that belong to a specific KMIP client.  Partial name allowed.
+            Limits reads or copies from the Source Server to only those keys that belong to a specific KMIP client.  Partial Names NOT allowed.
 
 __listSrcClients:__    (optional)
             Lists clients that are available on the Source Server.
