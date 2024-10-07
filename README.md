@@ -5,7 +5,7 @@ The file k-rest.py is the "main" file for this application.
 
 *krest.bat and k-rest.sh have also been created to simplify execution of the application and include all of the paramters.*
 
-__usage:__ k-rest.py [-h] -srcHost SRCHOST [-srcPort SRCPORT] -srcUser SRCUSER -srcPass SRCPASS -dstHost DSTHOST [-dstPort DSTPORT] -dstUser DSTUSER -dstPass DSTPASS [-listOnly {NEITHER,SOURCE,DESTINATION,BOTH}] [-srcuuid SRCUUID] [--srcClientName SOURCECLIENTNAME] [--listSrcClients] [-netAppNodeID NODEID] [-netAppClusterName NODENAME] [-netAppVserverID VSID] [--dstUserGroupName GROUPNAME]
+__usage:__ k-rest.py [-h] -srcHost SRCHOST [-srcPort SRCPORT] -srcUser SRCUSER -srcPass SRCPASS -dstHost DSTHOST [-dstPort DSTPORT] -dstUser DSTUSER -dstPass DSTPASS [-listOnly {NEITHER,SOURCE,DESTINATION,BOTH}] [-srcuuid SRCUUID] [--srcClientName SOURCECLIENTNAME] [--listSrcClients] [-resolveSrcClientOwnership] [-netAppNodeID NODEID] [-netAppClusterName NODENAME] [-netAppVserverID VSID] [--dstUserGroupName GROUPNAME]
 
 __Arguments:__
 
@@ -34,8 +34,8 @@ __srcClientName:__    (optional)
 __listSrcClients:__    (optional)
             Lists clients that are available on the Source Server.
 
-__repairSrcClientOwnership:__    (optional)
-            In some instances, the source clients have no administrative ownership.  This command temporarly assigns ownership of the client to the srcUser for the purposes of completing the actions of key copying and the returns the client ownership to its original configuration.
+__resolveSrcClientOwnership:__    (optional)
+            In some instances, the source clients have no administrative ownership.  This command temporarly assigns ownership of the client to the srcUser for the purposes of completing the actions of key copying and the returns the client ownership to its original configuration.  The srcUser must have _klmClientUser_ permissions in the source server to use this feature.
 
 __netAppNodeID:__   (optional)
             NetApp Specific Feature.  Similar to srcuuid.  Limits reads or copies from the Source Server to only those keys contain a NetApp-specific KMIP attribute x-NETAPP-NodeId and contain all or part of the NODEID string.

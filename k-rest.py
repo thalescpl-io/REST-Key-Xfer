@@ -81,7 +81,7 @@ srcClientName = ""   #set default to a zero length string
 parser.add_argument("-listSrcClients", action="store_true", dest="listSrcClients", required=False)
 listSrcClients = False   #set default to be false
 
-parser.add_argument("-repairSrcClientOwnership", action="store_true", dest="repairSrcClientOwnership", required=False)
+parser.add_argument("-resolveSrcClientOwnership", action="store_true", dest="resolveSrcClientOwnership", required=False)
 listSrcClients = False   #set default to be false
 
 # Args are returned as a LIST.  Separate them into individual strings
@@ -176,7 +176,7 @@ if args.srcClientName is not None:
     print(" Source Client Name:", srcClientName)
 
 listSrcClients = args.listSrcClients
-addClientUser = args.repairSrcClientOwnership
+addClientUser = args.resolveSrcClientOwnership
 
 # ---- PARSING COMPLETE ----------------------------------------------------------
 
