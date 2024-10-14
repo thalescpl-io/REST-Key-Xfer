@@ -100,7 +100,9 @@ class GKLMAttributeType(enum.Enum):
     KEY_FORMAT                  = "KEY_FORMAT"
     CLIENT                      = "client"
     CLIENT_NAME                 = "clientName"
+    MANAGED_OBJECT_COUNT        = "managedObjectCount"
     OBJECT_COUNT                = "objectCount"
+    OBJECT                      = "object"
     SYMMETRIC_KEY               = "SYMMETRIC_KEY"   # Note that this attribute is written differently than a key type
     CLIENT_USERS                = "users"           # this is the user assigned to the client
     

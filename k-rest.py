@@ -213,17 +213,29 @@ if listOnly != listOnlyOption.DESTINATION.value:
     for client in range(listLen):
         t_clientName = clientList[client][GKLMAttributeType.CLIENT_NAME.value]
         t_symKeyCount = 0
+
+        t_mgdObjCnt = clientList[client][GKLMAttributeType.MANAGED_OBJECT_COUNT.value]
+        
+        t_objStr = clientList[client][GKLMAttributeType.OBJECT.value]        
         
         # Now check for the presents of any objects for the client
-        if GKLMAttributeType.OBJECT_COUNT.value in clientList[client].keys():
+        if len(t_objStr) > 0:
 
-            # Now since the client has objects, check for the presence of any SYMMETRIC KEYS.
-            if GKLMAttributeType.SYMMETRIC_KEY.value in clientList[client][GKLMAttributeType.OBJECT_COUNT.value].keys():
-                t_symKeyCount = clientList[client][GKLMAttributeType.OBJECT_COUNT.value][GKLMAttributeType.SYMMETRIC_KEY.value]
+            # Now since the client has objects, check for the presence of any SYMMETRIC KEYS.  Note that the format of information
+            # in the object string looks like "Symmetric Key (128)" where the number within the parenthasis is the quantity of 
+            # symmetric keys
+            if ObjectTypeName.SYMMETRIC_KEY.value.title() in t_objStr:
+                # get count string after symmetric identfier and strip white space.  This should give you an integer within parenthasis.
+                t_symCntStr = t_objStr.split(ObjectTypeName.SYMMETRIC_KEY.value.title(),1)[1] 
+                t_f         = filter(str.isdecimal, t_symCntStr) # filter out all characters that are not decimal
+                t_symCntStr = "".join(t_f) # create final string of symmetric count quantity
+
+                # Finally, an integer of the actual count.
+                t_symKeyCount = int(t_symCntStr)
                 srcKeyListCnt = srcKeyListCnt + int(t_symKeyCount)
 
         if listSrcClients:  # if user wants a list of available clients, provide it.
-            tmpStr = "\n      %s contains %s Exportable Symmetric Keys" %(t_clientName, t_symKeyCount)
+            tmpStr = "\n      %s contains %s managed objects %s Exportable Symmetric Keys" %(t_clientName, t_mgdObjCnt, t_symKeyCount)
             print(tmpStr)
 
         # If a client name is specified, then check to ensure it is present.
