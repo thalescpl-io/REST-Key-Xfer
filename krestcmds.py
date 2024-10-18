@@ -24,6 +24,8 @@ DST_REST_PREAMBLE   = "/api/v1/"
 
 APP_JSON            = "application/json"
 
+MANAGED_OBJECT      = "managedObject"
+
 
 def makeHexStr(t_val):
 # -------------------------------------------------------------------------------
@@ -40,6 +42,23 @@ def printJList(t_str, t_jList):
 # a more readable format.
 # -------------------------------------------------------------------------------    
     print("\n ", t_str, json.dumps(t_jList, skipkeys = True, allow_nan = True, indent = 3))
+
+def listToDict(t_list):
+# -------------------------------------------------------------------------------
+# Simple routine to take a string of word followed by values and turn them
+# into a dictionary of string values.  Note that we need to clean up
+# leading and trailing spaces
+# -------------------------------------------------------------------------------
+    t_dict = {}
+
+    for i in range(0, len(t_list), 2):
+        t_key = t_list[i]
+        t_key = t_key.strip()
+        t_value = t_list[i + 1]
+        t_value = t_value.strip()
+        t_dict[t_key] = t_value
+
+    return t_dict
 
     
 def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
@@ -93,7 +112,7 @@ def getSrcObjList(t_srcHost, t_srcPort, t_srcAuthStr):
         kPrintError("getSrcObjList", r)
         exit()
 
-    t_srcObjList           = r.json()['managedObject']
+    t_srcObjList           = r.json()[MANAGED_OBJECT]
 
     return t_srcObjList
 
@@ -121,7 +140,7 @@ def getSrcObjData(t_srcHost, t_srcPort, t_srcObjList, t_srcAuthStr):
             kPrintError("getSrcObj", r)
             exit()
 
-        t_data   = r.json()['managedObject']
+        t_data   = r.json()[MANAGED_OBJECT]
         t_srcObjData.append(t_data)     # Add data to list
         
     return t_srcObjData
@@ -201,8 +220,6 @@ def getSrcObjDataListByClient(t_srcHost, t_srcPort, t_srcAuthStr, t_suuid, t_obj
     else:
         t_srcRESTObjects = SRC_REST_PREAMBLE + "objects?objectType=" + t_objectType
 
-    t_srcRESTObjectDetail = SRC_REST_PREAMBLE + "objects"
-
     t_srcObjDataList = [] # created list to be returned later
 
     t_srcHostRESTCmd = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTObjects)
@@ -214,14 +231,16 @@ def getSrcObjDataListByClient(t_srcHost, t_srcPort, t_srcAuthStr, t_suuid, t_obj
         kPrintError("getSrcObjDataListByClient", r)
     else:
         # Note that the keyObjects do NOT include key blocks.  We will get that later.
-        t_Objects   = r.json()['managedObject']  
-        # t_ListLen           = len(t_Objects)
+        t_Objects   = r.json()[MANAGED_OBJECT]  
 
         # For SYMMETRIC KEYS, go through the list of objects and retrieve the key material AND key block.
         # The key block can ONLY be obtained by explicity specifing the UUID of the key from the REST
         # endpoint.  Therefore, you need to retreive EACH key by its UUID.
         if t_objectType == GKLMAttributeType.SYMMETRIC_KEY.value:
             t_srcObjDataList = getSrcKeyObjDetailList(t_srcHost, t_srcPort, t_srcAuthStr, t_Objects, t_suuid, t_client)
+
+        elif t_objectType == GKLMAttributeType.SECRET_DATA.value:
+            t_srcObjDataList = getSrcSecretObjDetailList(t_srcHost, t_srcPort, t_srcAuthStr, t_Objects, t_suuid, t_client)
 
     # printJList("srcKeyObjDataList:", t_srcObjDataList)
     return t_srcObjDataList
@@ -236,8 +255,9 @@ def getSrcKeyObjDetailList(t_srcHost, t_srcPort, t_srcAuthStr, t_srcObj, t_suuid
     t_srcRESTObjectDetail = SRC_REST_PREAMBLE + "objects"
 
     for obj in range(t_ListLen):
-        t_kt            = str(t_srcObj[obj][GKLMAttributeType.KEY_TYPE.value])
+
         t_srcObjID      = t_srcObj[obj][GKLMAttributeType.UUID.value]
+        t_kt            = str(t_srcObj[obj][GKLMAttributeType.KEY_TYPE.value])
         t_srcObjAlias   = t_srcObj[obj][GKLMAttributeType.ALIAS.value]
 
         t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTObjectDetail, t_srcObjID)
@@ -245,21 +265,55 @@ def getSrcKeyObjDetailList(t_srcHost, t_srcPort, t_srcAuthStr, t_srcObj, t_suuid
 
         r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            kPrintError("getSrcKeyObjDetailLis", r)
+            kPrintError("getSrcKeyObjDetailList", r)
             break   # stop processing the objects.
 
         elif len(t_suuid) == 0: # add data unless a specific UUID is specified
-            t_data   = r.json()['managedObject']
+            t_data   = r.json()[MANAGED_OBJECT]
             t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
             t_srcKeyObjDetailList.append(t_data)     # Add data to list
                 
         elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
-            t_data   = r.json()['managedObject']
+            t_data   = r.json()[MANAGED_OBJECT]
             t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
             t_srcKeyObjDetailList.append(t_data)     # Add data to list
 
-    # printJList("t_srcKeyObjDetailList:", t_srcObjDataList)
+    # printJList("t_srcKeyObjDetailList:", t_srcKeyObjDetailList)
     return t_srcKeyObjDetailList
+
+def getSrcSecretObjDetailList(t_srcHost, t_srcPort, t_srcAuthStr, t_srcObj, t_suuid, t_client):
+# -----------------------------------------------------------------------------
+# REST Assembly for reading specific SECRET Data via OBJECT
+# -----------------------------------------------------------------------------
+    
+    t_srcSecretObjDetailList   = []
+    t_ListLen               = len(t_srcObj)
+    t_srcRESTObjectDetail = SRC_REST_PREAMBLE + "objects"
+
+    for obj in range(t_ListLen):
+
+        t_srcObjID      = t_srcObj[obj][GKLMAttributeType.UUID.value]
+
+        t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTObjectDetail, t_srcObjID)
+        t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
+
+        r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+        if(r.status_code != STATUS_CODE_OK):
+            kPrintError("getSrcSecretObjDetailList", r)
+            break   # stop processing the objects.
+
+        elif len(t_suuid) == 0: # add data unless a specific UUID is specified
+            t_data   = r.json()[MANAGED_OBJECT]
+            t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
+            t_srcSecretObjDetailList.append(t_data)     # Add data to list
+                
+        elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
+            t_data   = r.json()[MANAGED_OBJECT]
+            t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
+            t_srcSecretObjDetailList.append(t_data)     # Add data to list
+
+    # printJList("t_srcSecretObjDetailList:", t_srcSecretObjDetailList)
+    return t_srcSecretObjDetailList
 
 def printSrcKeyList(t_srcKeyList):
 # -----------------------------------------------------------------------------
@@ -332,12 +386,47 @@ def printSrcKeyObjDataList(t_srcKeyObjDataList):
         t_hv        = str(t_srcKeyObjDataList[obj][GKLMAttributeType.DIGEST.value])
         t_client    = str(t_srcKeyObjDataList[obj][GKLMAttributeType.CLIENT_NAME.value])
         
-        tmpStr =    "\nSrc Obj: %s Alias: %s"   \
+        tmpStr =    "\nSrc Key Obj: %s" \
+                    "\n  Alias: %s"   \
                     "\n  UUID: %s"              \
                     "\n  Client Name: %s"       \
                     "\n  Key Type: %s "         \
                     "\n  Hash: %s"              \
                     %(obj, t_alias.strip("[]"), t_uuid, t_client, t_kt, convertGKLMHashToString(t_hv))
+
+        print(tmpStr)            
+        
+    return t_success
+
+def printSrcSecretObjDataList(t_srcSecretObjDataList):
+# -----------------------------------------------------------------------------
+# Display the contents of a srcSecretObjDataList
+# -----------------------------------------------------------------------------
+
+    t_success           = True
+    t_ListLen           = len(t_srcSecretObjDataList)
+        
+    for obj in range(t_ListLen):
+        
+        # Separate string conversions before sending.  
+        # Python gets confused if they are all converted as part of the string assembly of tmpStr.  tmpStr.strip("[]")
+        
+        # t_alias     = str(t_srcSecretObjDataList[obj][GKLMAttributeType.ALIAS.value])
+        t_uuid        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.UUID.value])
+        t_type        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.TYPE.value])
+        # t_hv        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.DIGEST.value])
+        t_client    = str(t_srcSecretObjDataList[obj][GKLMAttributeType.CLIENT_NAME.value])
+
+        t_alias     = "alias"
+        t_hv        = "hv"
+        
+        tmpStr =    "\nSrc Secret Obj: %s"      \
+                    "\n  Alias: %s"             \
+                    "\n  UUID: %s"              \
+                    "\n  Client Name: %s"       \
+                    "\n  Secret Type: %s "         \
+                    "\n  Hash: %s"              \
+                    %(obj, t_alias.strip("[]"), t_uuid, t_client, t_type, convertGKLMHashToString(t_hv))
 
         print(tmpStr)            
         
@@ -503,11 +592,10 @@ def importDstDataSecretObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_x
         
     return t_success
 
-def printDstObjList(t_dstObjList):
+def printDstKeyObjList(t_dstObjList):
 # -----------------------------------------------------------------------------
 # Display the contents of a dstKeyObjList
 # -----------------------------------------------------------------------------
-    
     t_ListLen           = len(t_dstObjList)
 
     t_success           = True
@@ -522,7 +610,7 @@ def printDstObjList(t_dstObjList):
             t_ot    = str(t_dstObjList[obj][CMAttributeType.OBJECT_TYPE.value])
             t_fp    = str(t_dstObjList[obj][CMAttributeType.SHA256_FINGERPRINT.value])
         
-            tmpStr =    "\nDst Obj: %s Name: %s" \
+            tmpStr =    "\nDst Key Obj: %s Name: %s" \
             "\n  UUID: %s" \
             "\n  Key Type: %s" \
             "\n  Hash: %s" \
@@ -530,7 +618,7 @@ def printDstObjList(t_dstObjList):
             
         except Exception as e:
             t_success           = False
-            tmpStr =    "\nDst Obj: %s Name: %s" \
+            tmpStr =    "\nDst Key Obj: %s Name: %s" \
             "\n  UUID: %s" \
             "\n  Key Type: %s" \
             %(obj, t_name, t_uuid, t_ot)
@@ -542,13 +630,11 @@ def printDstObjDataAndOwner(t_dstObjData, t_UserDict):
 # -----------------------------------------------------------------------------
 # Display the contents of a dstObjData
 # -----------------------------------------------------------------------------
-    
     t_ListLen   = len(t_dstObjData)
 
     t_success   = True
     for obj in range(t_ListLen):
-        t_meta      = ""
-        t_OID       = ""        
+     
         # Separate string conversions before sending.  Python gets confused if 
         # they are all converted as part of the string assembly of tmpStr.
         # Error checking added in case an attribute is missing (may happen with opaque objects)

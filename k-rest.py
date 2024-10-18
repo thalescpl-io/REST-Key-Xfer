@@ -196,23 +196,34 @@ if listOnly != listOnlyOption.DESTINATION.value:
 # ------------- Source Client Information ---------------------------
 # If a list of clients is requested, then provide it.
 # -------------------------------------------------------------------
-    clientList = getSrcClients(srcHost, srcPort, srcAuthStr)
-    listLen = len(clientList)
-    srcClientFound = False
-    srcClientKeyCount = 0
-    srcKeyListCnt = 0
-    srcKeyObjDataList = []
-    t_srcUserList = []
-    clientUserAdded = False
+
+    # Initialize for Client User List
+    clientList          = getSrcClients(srcHost, srcPort, srcAuthStr)
+    listLen             = len(clientList)
+    srcClientFound      = False
+    t_srcUserList       = []
+    clientUserAdded     = False
+
+    # Initialize for Symmetric Key Objects
+    srcKeyObjDataList   = []
+    srcClientKeyCount   = 0
+    srcKeyListCnt       = 0
+
+    # Initialize for Secret Data Objects
+    srcSecretObjDataList = []
+    srcSecretListCnt    = 0
 
 
-    if listSrcClients:  # if user wants a list of available clients, provide it.
+    # If user wants a list of available clients, provide it.
+    if listSrcClients:  
         tmpStr = "    Available Source Clients (%s): " %(listLen)
         print(tmpStr)
 
+    # Now for each client in the Source Server, extract the objects
     for client in range(listLen):
         t_clientName = clientList[client][GKLMAttributeType.CLIENT_NAME.value]
         t_symKeyCount = 0
+        t_secretCount = 0
 
         t_mgdObjCnt = clientList[client][GKLMAttributeType.MANAGED_OBJECT_COUNT.value]
         
@@ -221,78 +232,113 @@ if listOnly != listOnlyOption.DESTINATION.value:
         # Now check for the presents of any objects for the client
         if len(t_objStr) > 0:
 
-            print("\nHere - objectStr:", t_objStr)
-
             # Now since the client has objects, check for the presence of any SYMMETRIC KEYS.  Note that the format of information
-            # in the object string looks like "Symmetric Key (128)" where the number within the parenthasis is the quantity of 
-            # symmetric keys
-            if ObjectTypeName.SYMMETRIC_KEY.value.title() in t_objStr:
-                # get count string after symmetric identfier and strip white space.  This should give you an integer within parenthasis.
-                t_symCntStr = t_objStr.split(ObjectTypeName.SYMMETRIC_KEY.value.title(),1)[1] 
-                t_f         = filter(str.isdecimal, t_symCntStr) # filter out all characters that are not decimal
-                t_symCntStr = "".join(t_f) # create final string of symmetric count quantity
+            # in the object string looks like "Symmetric Key (128) Secret Data (4)" where the number within the parenthasis is the quantity of 
+            # symmetric keys or secret objects.
+
+            t_objStr = t_objStr.rstrip() # remove leading and trailing white space
+            t_objStr = t_objStr.replace(' (', ', (') # Replace spaces before parenthasis with commas for easier parsing
+            t_objStr = t_objStr.replace(') ', '), ') # Replace spaces before parenthasis with commas for easier parsing
+            t_objStr = t_objStr.replace(' (', '') # Remove leading parenthasis
+            t_objStr = t_objStr.replace(')', '') # Remove trailing parenthasis
+
+            t_objStrList = t_objStr.split(',') # create a list of the elements in the string.  Note elements are separated by a comma
+
+            t_objStrDict = listToDict(t_objStrList)
+
+            # Process SYMMETRIC KEY objects
+            if ObjectTypeName.SYMMETRIC_KEY.value.title() in t_objStrDict.keys():
+                t_symCntStr = t_objStrDict[ObjectTypeName.SYMMETRIC_KEY.value.title()]
 
                 # Finally, an integer of the actual count.
                 t_symKeyCount = int(t_symCntStr)
                 srcKeyListCnt = srcKeyListCnt + int(t_symKeyCount)
 
+            # Process SECRET DATA objects
+            if ObjectTypeName.SECRET_DATA.value.title() in t_objStrDict.keys():
+                t_secCntStr = t_objStrDict[ObjectTypeName.SECRET_DATA.value.title()]
+
+                # Finally, an integer of the actual count.
+                t_secretCount = int(t_secCntStr)
+                srcSecretListCnt = srcSecretListCnt + int(t_secretCount)
+
         if listSrcClients:  # if user wants a list of available clients, provide it.
-            tmpStr = "\n      %s contains %s managed objects %s Exportable Symmetric Keys" %(t_clientName, t_mgdObjCnt, t_symKeyCount)
+            tmpStr = "\n      %s contains %s Managed Objects %s Exportable Symmetric Keys %s Exportable Secrets" %(t_clientName, t_mgdObjCnt, t_symKeyCount, t_secretCount)
             print(tmpStr)
+
 
         # If a client name is specified, then check to ensure it is present.
         # If client name was specified, search for it and then capture key information 
         # specific to that client (presuming keys exist)
-        if len(srcClientName) > 0: 
+        if len(srcClientName) > 0:
             if srcClientName == t_clientName:
                 srcClientFound = True
-                srcClientKeyCount = t_symKeyCount
+
+                # Before attempting to get the key material, ensure that the srcUser has the permissions to obtain objects
+                if addClientUser and (srcUser not in clientList[client][GKLMAttributeType.CLIENT_USERS.value]):
+                    t_srcUserList.append(srcUser) # create list of user with the user associated with login
+                    t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
+                    clientUserAdded = True
+
+                # Save Key And Secret Object Counts
+                srcClientKeyCount       = t_symKeyCount
+                srcClientSecretCount    = t_secretCount
 
                 if int(t_symKeyCount) > 0:
                     tmpStr = "       Retrieving symmetric key information for %s... " %(t_clientName)
                     print(tmpStr)
 
-                    # Before attempting to get the key material, ensure that the srcUser has the permissions to obtain key material
-                    if srcUser not in clientList[client][GKLMAttributeType.CLIENT_USERS.value]:
-                        if addClientUser:
-                            t_srcUserList.append(srcUser) # create list of user with the user associated with login
-                            t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
-                            clientUserAdded = True
-
                     # -------------- Retrieve the Key Material --------------------------------------------------------------
                     t_srcKeyObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SYMMETRIC_KEY.value, t_clientName)
-                    srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of keys
+                    srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of key objects
                     # -------------------------------------------------------------------------------------------------------
 
-                    # If a client user was added, remove it and restore the original ownership.
-                    if clientUserAdded:
-                        t_success = removeSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
-                        t_originalClientUserList = clientList[client][GKLMAttributeType.CLIENT_USERS.value] # retrieve original list of users
-                        t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_originalClientUserList)
+                if int(t_secretCount) > 0:
+                    tmpStr = "       Retrieving secret data information for %s... " %(t_clientName)
+                    print(tmpStr)
 
-        # Otherwise, just collect the key material and append it to the exhaustive list of ALL keys for ALL clients
-        else:
-            if int(t_symKeyCount) > 0:
-                tmpStr = "       Retrieving symmetric key information for %s... " %(t_clientName)
-                print(tmpStr)
-
-                # Before attempting to get the key material, ensure that the srcUser has the permissions to obtain key material
-                if srcUser not in clientList[client][GKLMAttributeType.CLIENT_USERS.value]:                
-                    if addClientUser:
-                        t_srcUserList.append(srcUser) # create list of user with the user associated with login
-                        t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
-                        clientUserAdded = True
-
-                # -------------- Retrieve the Key Material --------------------------------------------------------------
-                t_srcKeyObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SYMMETRIC_KEY.value, t_clientName)
-                srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of keys
-                # -------------------------------------------------------------------------------------------------------
+                    # -------------- Retrieve the Secret Data Material --------------------------------------------------------------
+                    t_srcSecretObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SECRET_DATA.value, t_clientName)
+                    srcSecretObjDataList.extend(t_srcSecretObjDataList) # Add client-specific information to total list of secrete data objects
+                    # -------------------------------------------------------------------------------------------------------
 
                 # If a client user was added, remove it and restore the original ownership.
                 if clientUserAdded:
                     t_success = removeSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
                     t_originalClientUserList = clientList[client][GKLMAttributeType.CLIENT_USERS.value] # retrieve original list of users
                     t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_originalClientUserList)
+
+        # Otherwise, just collect the key material and append it to the exhaustive list of ALL objects for ALL clients
+        else:
+            # Before attempting to get the key material, ensure that the srcUser has the permissions to obtain objects
+            if addClientUser and (srcUser not in clientList[client][GKLMAttributeType.CLIENT_USERS.value]):
+                t_srcUserList.append(srcUser) # create list of user with the user associated with login
+                t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
+                clientUserAdded = True
+
+            if int(t_symKeyCount) > 0:
+                tmpStr = "       Retrieving symmetric key information for %s... " %(t_clientName)
+                print(tmpStr)
+
+                # -------------- Retrieve the Key Material --------------------------------------------------------------
+                t_srcKeyObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SYMMETRIC_KEY.value, t_clientName)
+                srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of key objects
+                # -------------------------------------------------------------------------------------------------------
+
+            if int(t_secretCount) > 0:
+                tmpStr = "       Retrieving secret data information for %s... " %(t_clientName)
+                print(tmpStr)
+
+                # -------------- Retrieve the Secret Data Material --------------------------------------------------------------
+                t_srcSecretObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SECRET_DATA.value, t_clientName)
+                srcSecretObjDataList.extend(t_srcSecretObjDataList) # Add client-specific information to total list of secrete data objects
+                # -------------------------------------------------------------------------------------------------------
+
+            # If a client user was added, remove it and restore the original ownership.
+            if clientUserAdded:
+                t_success = removeSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
+                t_originalClientUserList = clientList[client][GKLMAttributeType.CLIENT_USERS.value] # retrieve original list of users
+                t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_originalClientUserList)
 
     # Once list of clients has been parse, if the srcClientName was specified but it is not present (or has no keys),
     # then bail and make the user coorect and resubmit the command.
@@ -301,22 +347,27 @@ if listOnly != listOnlyOption.DESTINATION.value:
             tmpStr = "\n    ERROR: Client Name %s not found in list of available clients. Please try again." %(srcClientName)
             print(tmpStr)
             exit()
-        elif srcClientKeyCount == 0:
-            tmpStr = "\n    ERROR: Client Name %s was found in list of available clients, but does not contain any SYMMETRIC keys. Please try again." %(srcClientName)
+        elif srcClientKeyCount == 0 and srcClientSecretCount == 0:
+            tmpStr = "\n    ERROR: Client Name %s was found in list of available clients, but does not contain any SYMMETRIC keys or SECRET objects. Please try again." %(srcClientName)
             print(tmpStr)
             exit()
         else:
-            tmpStr = "\n    Client Name %s was found in list of available clients and contains %s SYMMETRIC keys. " %(srcClientName, srcClientKeyCount)
+            tmpStr = "\n    Client Name %s was found in list of available clients and contains %s SYMMETRIC keys and %s SECRET objects. " %(srcClientName, srcClientKeyCount, srcClientSecretCount)
             print(tmpStr)            
 
     # If the length of the NetApp filter (dictionary) is greater than zero, apply NetApp filter.
     if len(srcNetAppFilterDict) > 0:
+        # filter key objects against NetAP dictionary
         t_srcFilteredList = filterNetAppSrcKeyObjDataList(srcKeyObjDataList, srcNetAppFilterDict)
         srcKeyObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
-    # After iterating through all of the clients in the source, report the total of all key material in the list
-    srcKeyObjCnt        = len(srcKeyObjDataList)
+        # filter secret objects against NetAPP dictionary
+        # FIXTHIS t_srcFilteredList = filterNetAppSrcKeyObjDataList(srcSecretObjDataList, srcNetAppFilterDict)
+        # srcSecretObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
+    # After iterating through all of the clients in the source, report the total of all key and secret material in the list
+    srcKeyObjCnt        = len(srcKeyObjDataList)
+    srcSecretObjCnt     = len(srcSecretObjDataList)
 
         
     if listOnly != listOnlyOption.DESTINATION.value:
@@ -324,7 +375,11 @@ if listOnly != listOnlyOption.DESTINATION.value:
         print(" Number of filtered and exportable Src Key Objects: ", srcKeyObjCnt)
         printSrcKeyObjDataList(srcKeyObjDataList)
 
-        print("\n --- SRC KEY OBJECT RETRIEVAL COMPLETE --- \n")
+        print("\n Number of Src List Secrets: ", srcSecretListCnt)
+        print(" Number of filtered and exportable Src Secret Objects: ", srcSecretObjCnt)
+        printSrcSecretObjDataList(srcSecretObjDataList)
+
+        print("\n --- SRC OBJECT RETRIEVAL COMPLETE --- \n")
 
 if listOnly != listOnlyOption.SOURCE.value:
     dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)

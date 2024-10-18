@@ -24,11 +24,12 @@ class ObjectTypeName(enum.Enum):
     PRIVATE_KEY         = 'PRIVATE_KEY'
     SPLIT_KEY           = 'SPLIT_KEY'
     TEMPLATE            = 'TEMPLATE' 
-    SECRET_DATA         = 'SECRET_DATA'
+    SECRET_DATA         = 'SECRET DATA'
     OPAQUE_DATA         = 'OPAQUE_DATA'
     PGP_KEY             = 'PGP_KEY'
     CERTIFICATE_REQUEST = 'CERTIFICATE_REQUEST'
-    
+    OPAQUE_OBJECT       = "Opaque Object"
+   
 class CryptographicUsageMask(enum.Enum):
     # KMIP 1.0
     SIGN                = 0x00000001
@@ -104,7 +105,16 @@ class GKLMAttributeType(enum.Enum):
     OBJECT_COUNT                = "objectCount"
     OBJECT                      = "object"
     SYMMETRIC_KEY               = "SYMMETRIC_KEY"   # Note that this attribute is written differently than a key type
+    SECRET_DATA                 = "SECRET_DATA"
+    OPAQUE_OBJECT               = "OPAQUE_OBJECT"
+    TYPE                        = "Type"
     CLIENT_USERS                = "users"           # this is the user assigned to the client
+
+class GKLMSecretDataType(enum.Enum):
+    BLOB                = "blob"
+    PASSWORD            = "PASSWORD"
+    SEED                = "seed"
+    OPAQUE              = "OPAQUE"
     
 class CMAttributeType(enum.Enum):
     ID                          = 'id'
@@ -174,6 +184,11 @@ class CMMetaGroupPermissions(enum.Enum):
     DECRYPT                     = 'DecryptWithKey'
     ENCRYPT                     = 'EncryptWithKey'
     SIGN_VERIFY                 = 'SignVerifyWithKey'
+
+class CMSecretDataType(enum.Enum):
+    BLOB                = "blob"
+    PASSWORD            = "password"
+    SEED                = "seed"
     
 class CMUserGroup:
     def __init__(self, name, member, description=None):
