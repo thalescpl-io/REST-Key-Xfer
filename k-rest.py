@@ -221,6 +221,8 @@ if listOnly != listOnlyOption.DESTINATION.value:
         # Now check for the presents of any objects for the client
         if len(t_objStr) > 0:
 
+            print("\nHere - objectStr:", t_objStr)
+
             # Now since the client has objects, check for the presence of any SYMMETRIC KEYS.  Note that the format of information
             # in the object string looks like "Symmetric Key (128)" where the number within the parenthasis is the quantity of 
             # symmetric keys
@@ -258,7 +260,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
                             clientUserAdded = True
 
                     # -------------- Retrieve the Key Material --------------------------------------------------------------
-                    t_srcKeyObjDataList   = getSrcKeyObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, t_clientName)
+                    t_srcKeyObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SYMMETRIC_KEY.value, t_clientName)
                     srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of keys
                     # -------------------------------------------------------------------------------------------------------
 
@@ -282,7 +284,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
                         clientUserAdded = True
 
                 # -------------- Retrieve the Key Material --------------------------------------------------------------
-                t_srcKeyObjDataList   = getSrcKeyObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, t_clientName)
+                t_srcKeyObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SYMMETRIC_KEY.value, t_clientName)
                 srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of keys
                 # -------------------------------------------------------------------------------------------------------
 
@@ -348,8 +350,6 @@ if listOnly != listOnlyOption.SOURCE.value:
         t_nickname  = t_idx[CMUserAttribute.NICKNAME.value]
         dstUsrsAllDict[t_user_id] = t_nickname
 
-
-        
         
 if listOnly == listOnlyOption.NEITHER.value:
 ###########################################################################################################        
@@ -424,8 +424,8 @@ if listOnly == listOnlyOption.NEITHER.value:
     for xKeyObj in xKeyObjList:
         t_keyObjName = xKeyObj[CMAttributeType.NAME.value]
         print("\n xKeyObjName: ",  t_keyObjName)    
-        success = importDstDataObject(dstHost, dstPort, dstUser, dstAuthStr, xKeyObj)
-        print(" --> importDstDataOjbect Success:", success)
+        success = importDstDataKeyObject(dstHost, dstPort, dstUser, dstAuthStr, xKeyObj)
+        print(" --> importDstDataKeyOjbect Success:", success)
         
         # After the object has been successfully created, assign it to the Group, if one has been provided.
         

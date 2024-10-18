@@ -186,12 +186,10 @@ def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
     return t_srcKeyDataList
 
 
-def getSrcKeyObjDataListByClient(t_srcHost, t_srcPort, t_srcAuthStr, t_suuid, t_client):
+def getSrcObjDataListByClient(t_srcHost, t_srcPort, t_srcAuthStr, t_suuid, t_objectType, t_client):
 # -----------------------------------------------------------------------------
-# REST Assembly for reading specific Key Data via OBJECT
+# REST Assembly for reading specific Data via OBJECT
 #
-# This code is the same as the code in getSrcKeyObjDataList with the addition
-# of a parameter that specifies the client name.  The reason for this is because
 # SKLM will allow KMIP clients to create keys without associating them to an SKLM User.
 # When we attempt to retrieve any key that is not associated with a user, we get
 # error message.  HOWEVER, if we specify the client name in the request, the 
@@ -199,60 +197,69 @@ def getSrcKeyObjDataListByClient(t_srcHost, t_srcPort, t_srcAuthStr, t_suuid, t_
 # -----------------------------------------------------------------------------
     
     if len(t_client) > 0:
-        t_srcRESTKeyObjects = SRC_REST_PREAMBLE + "objects?clientName=" + t_client
+        t_srcRESTObjects = SRC_REST_PREAMBLE + "objects?objectType=" + t_objectType + "&clientName=" + t_client
     else:
-        t_srcRESTKeyObjects = SRC_REST_PREAMBLE + "objects"
+        t_srcRESTObjects = SRC_REST_PREAMBLE + "objects?objectType=" + t_objectType
 
-    t_srcRESTKeyObjectDetail = SRC_REST_PREAMBLE + "objects"
+    t_srcRESTObjectDetail = SRC_REST_PREAMBLE + "objects"
 
-    t_srcKeyObjDataList = [] # created list to be returned later
-    t_cnt               = 0  # keep track of the number of exportable key objects
+    t_srcObjDataList = [] # created list to be returned later
 
-    t_srcHostRESTCmd = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjects)
+    t_srcHostRESTCmd = "https://%s:%s%s" %(t_srcHost, t_srcPort, t_srcRESTObjects)
     t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
 
     # now that everything is organized, go get the list of key objects from SKLM
     r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
     if(r.status_code != STATUS_CODE_OK):
-        kPrintError("getSrcKeyObjDataListByClient", r)
+        kPrintError("getSrcObjDataListByClient", r)
     else:
-        t_keyObjects   = r.json()['managedObject']  # contains list of objects but not include key block
-        t_ListLen           = len(t_keyObjects)
+        # Note that the keyObjects do NOT include key blocks.  We will get that later.
+        t_Objects   = r.json()['managedObject']  
+        # t_ListLen           = len(t_Objects)
 
+        # For SYMMETRIC KEYS, go through the list of objects and retrieve the key material AND key block.
+        # The key block can ONLY be obtained by explicity specifing the UUID of the key from the REST
+        # endpoint.  Therefore, you need to retreive EACH key by its UUID.
+        if t_objectType == GKLMAttributeType.SYMMETRIC_KEY.value:
+            t_srcObjDataList = getSrcKeyObjDetailList(t_srcHost, t_srcPort, t_srcAuthStr, t_Objects, t_suuid, t_client)
 
-        # Go through the list of objects and retrieve the key material AND key block.  The key block
-        # can ONLY be obtained by explicity specifing the UUID of the key from the REST endpoint.
-        # Therefore, you need to retreive EACH key by its UUID.
+    # printJList("srcKeyObjDataList:", t_srcObjDataList)
+    return t_srcObjDataList
 
-        for obj in range(t_ListLen):
-            t_kt            = str(t_keyObjects[obj][GKLMAttributeType.KEY_TYPE.value])
-            t_srcObjID      = t_keyObjects[obj][GKLMAttributeType.UUID.value]
-            t_srcObjAlias   = t_keyObjects[obj][GKLMAttributeType.ALIAS.value]
+def getSrcKeyObjDetailList(t_srcHost, t_srcPort, t_srcAuthStr, t_srcObj, t_suuid, t_client):
+# -----------------------------------------------------------------------------
+# REST Assembly for reading specific SYMMETRIC KEY Data via OBJECT
+# -----------------------------------------------------------------------------
+    
+    t_srcKeyObjDetailList   = []
+    t_ListLen               = len(t_srcObj)
+    t_srcRESTObjectDetail = SRC_REST_PREAMBLE + "objects"
 
-            t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTKeyObjectDetail, t_srcObjID)
-            t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
+    for obj in range(t_ListLen):
+        t_kt            = str(t_srcObj[obj][GKLMAttributeType.KEY_TYPE.value])
+        t_srcObjID      = t_srcObj[obj][GKLMAttributeType.UUID.value]
+        t_srcObjAlias   = t_srcObj[obj][GKLMAttributeType.ALIAS.value]
 
-            # Only retreive SYMMETRIC_KEYS
-            
-            if (t_kt == ObjectType.SYMMETRIC_KEY.name):        
-                r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
-                if(r.status_code != STATUS_CODE_OK):
-                    kPrintError("getSrcKeyObjDataListByClient2", r)
-                    break   # stop proccessing the objects.
+        t_srcHostRESTCmd = "https://%s:%s%s/%s" %(t_srcHost, t_srcPort, t_srcRESTObjectDetail, t_srcObjID)
+        t_srcHeaders    = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_srcAuthStr}
 
-                elif len(t_suuid) == 0: # add data unless a specific UUID is specified
-                    t_data   = r.json()['managedObject']
-                    t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
-                    t_srcKeyObjDataList.append(t_data)     # Add data to list
-                    t_cnt += 1  # increment object count
+        r = requests.get(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
+        if(r.status_code != STATUS_CODE_OK):
+            kPrintError("getSrcKeyObjDetailLis", r)
+            break   # stop processing the objects.
+
+        elif len(t_suuid) == 0: # add data unless a specific UUID is specified
+            t_data   = r.json()['managedObject']
+            t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
+            t_srcKeyObjDetailList.append(t_data)     # Add data to list
                 
-                elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
-                    t_data   = r.json()['managedObject']
-                    t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
-                    t_srcKeyObjDataList.append(t_data)     # Add data to list
+        elif t_suuid in t_srcObjID: # only append data if the specified UUID is a match (or submatch) of the t_srcObjID
+            t_data   = r.json()['managedObject']
+            t_data[GKLMAttributeType.CLIENT_NAME.value] = t_client # save associated client name
+            t_srcKeyObjDetailList.append(t_data)     # Add data to list
 
-    # printJList("srcKeyObjDataList:", t_srcKeyObjDataList)
-    return t_srcKeyObjDataList
+    # printJList("t_srcKeyObjDetailList:", t_srcObjDataList)
+    return t_srcKeyObjDetailList
 
 def printSrcKeyList(t_srcKeyList):
 # -----------------------------------------------------------------------------
@@ -440,9 +447,9 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 
     return t_dstObjData
 
-def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_xKeyObj):
+def importDstDataKeyObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_xKeyObj):
 # -----------------------------------------------------------------------------
-# REST Assembly for IMPORTING specific Object Data into DESTINATION HOST
+# REST Assembly for IMPORTING specific Key Object Data into DESTINATION HOST
 #
 # Using the VAULT/KEYS2 API, this code adds individual keys to the desitation.
 # This routine needs to be called for EACH key that needs to be written.
@@ -461,9 +468,37 @@ def importDstDataObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_xKeyObj
     t_success = True
     if(r.status_code == STATUS_CODE_CREATED):
         t_Response      = r.json()        
-        # print("  ->Object Created: ", t_Response[CMAttributeType.NAME.value])
+        # print("  ->Key Object Created: ", t_Response[CMAttributeType.NAME.value])
     else:
-        kPrintError("importDstDataObject", r)        
+        kPrintError("importDstDataKeyObject", r)        
+        t_success = False
+        
+    return t_success
+
+def importDstDataSecretObject(t_dstHost, t_dstPort, t_dstUser, t_dstAuthStr, t_xSecretObj):
+# -----------------------------------------------------------------------------
+# REST Assembly for IMPORTING specific Secret Object Data into DESTINATION HOST
+#
+# Using the VAULT/SECRETS API, this code adds individual SECRETS to the desitation.
+# This routine needs to be called for EACH secret that needs to be written.
+#
+# Note that an ERROR will occur if a secret of the same name already exists in the 
+# destination.
+# -----------------------------------------------------------------------------
+
+    t_dstRESTCmd        = DST_REST_PREAMBLE + "vault/secrets"
+
+    t_dstHostRESTCmd = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTCmd)
+    t_dstHeaders = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization":t_dstAuthStr}
+
+    r = requests.post(t_dstHostRESTCmd, data=json.dumps(t_xSecretObj), headers=t_dstHeaders, verify=False)
+
+    t_success = True
+    if(r.status_code == STATUS_CODE_CREATED):
+        t_Response      = r.json()        
+        # print("  ->Secret Object Created: ", t_Response[CMAttributeType.NAME.value])
+    else:
+        kPrintError("importDstDataSecretObject", r)        
         t_success = False
         
     return t_success
