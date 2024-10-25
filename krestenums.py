@@ -2,6 +2,7 @@
 #
 # definition file
 ######################################################################
+from asyncio.windows_events import NULL
 import enum
 
 # Class and enumersations taken from KMIP standard
@@ -32,6 +33,7 @@ class ObjectTypeName(enum.Enum):
    
 class CryptographicUsageMask(enum.Enum):
     # KMIP 1.0
+    NULL                = 0x00000000
     SIGN                = 0x00000001
     VERIFY              = 0x00000002
     ENCRYPT             = 0x00000004
@@ -41,7 +43,8 @@ class CryptographicUsageMask(enum.Enum):
     EXPORT              = 0x00000040
     MAC_GENERATE        = 0x00000080
     MAC_VERIFY          = 0x00000100
-    DERIVE_KEY          = 0x00000200
+    # DERIVE_KEY          = 0x00000200
+    DERIVE              = 0x00000200
     CONTENT_COMMITMENT  = 0x00000400
     KEY_AGREEMENT       = 0x00000800
     CERTIFICATE_SIGN    = 0x00001000
@@ -106,15 +109,39 @@ class GKLMAttributeType(enum.Enum):
     OBJECT                      = "object"
     SYMMETRIC_KEY               = "SYMMETRIC_KEY"   # Note that this attribute is written differently than a key type
     SECRET_DATA                 = "SECRET_DATA"
+    SECRET_STATE                = "State"
+    SECRET_ALGORITHM            = "Algorithm"
+    SECRET_CRYPOGRAPHIC_LENGTH  = "Cryptographic Length"
+    NAME_VALUE                  = "VALUE"
     OPAQUE_OBJECT               = "OPAQUE_OBJECT"
     TYPE                        = "Type"
     CLIENT_USERS                = "users"           # this is the user assigned to the client
 
-class GKLMSecretDataType(enum.Enum):
+class CMSecretDataType(enum.Enum):
     BLOB                = "blob"
     PASSWORD            = "PASSWORD"
     SEED                = "seed"
     OPAQUE              = "OPAQUE"
+
+class CMSecretAlgorithType(enum.Enum):
+    SECRET_SEED        = "SECRETSEED"
+
+class CMSecretAttributeType(enum.Enum):
+    DATA_TYPE           = "dataType"
+    MATERIAL            = "material"
+    META                = "meta"
+    NAME                = "name"
+    PASSWORD_CONFIG     = "passwordConfig"
+    STATE               = "state"
+    UNDELETEABLE        = "undeletable"
+    UNEXPORTABLE        = "unexportable"
+    USAGE_MASK          = "usageMask"
+
+class CMSecretPWConfigType(enum.Enum):
+    PASSWORD_LENGTH     = "passwordLength"
+
+class CMSecretObjectType(enum.Enum):
+    SECRET_DATA     = "Secret Data"
     
 class CMAttributeType(enum.Enum):
     ID                          = 'id'

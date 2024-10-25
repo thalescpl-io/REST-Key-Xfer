@@ -60,7 +60,34 @@ def listToDict(t_list):
 
     return t_dict
 
-    
+
+def bracketsToDict(t_stringWithBrackets):
+# -------------------------------------------------------------------------------
+# Simple routing that changes a string of "[[Idx 0] [Type Text] [Value 12345]]"
+# to a dictionary of {"Idx": "0", "Type":"Text", "Value":"12345"}
+# into a dictionary of string values.  Note that we need to clean up
+# leading and trailing spaces
+# -------------------------------------------------------------------------------
+    t_dict  = {}     # create now to return later
+
+    t_nameStr = t_stringWithBrackets.strip()    # remove leading and trailing spaces
+    t_nameStr = t_nameStr.strip('[[')           # remove leading and trailing spaces
+    t_nameStr = t_nameStr.strip(']]')           # remove leading and trailing spaces
+    t_nameStr = t_nameStr.replace(' [', ', [')  # Replace spaces before brackets with commas for easier parsing
+    t_nameStr = t_nameStr.replace('] ', '], ')  # Replace spaces before brackets with commas for easier parsing
+    t_nameStr = t_nameStr.replace(' [', '')     # Remove leading brackets
+    t_nameStr = t_nameStr.replace(']', '')      # Remove trailing brackets
+
+    t_nameStrList = t_nameStr.split(',') # create a list of the elements in the string.  Note elements are separated by a comma
+
+    for element in t_nameStrList:
+        t_split     = element.split()
+        t_key       = t_split[0]
+        t_value     = t_split[1]
+        t_dict[t_key]  = t_value
+
+    return t_dict
+
 def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
 # -----------------------------------------------------------------------------
 # REST Assembly for Src LOGIN 

@@ -12,6 +12,7 @@ import  argparse
 import  binascii
 import  codecs
 import  hashlib
+from tkinter.tix import TCL_ALL_EVENTS
 from    kerrors import *
 from    krestcmds import *
 from    krestenums import *
@@ -178,13 +179,15 @@ if args.srcClientName is not None:
 listSrcClients = args.listSrcClients
 addClientUser = args.resolveSrcClientOwnership
 
-# ---- PARSING COMPLETE ----------------------------------------------------------
+# ---- Command PARSING COMPLETE ----------------------------------------------------------
 
 # ################################################################################
 # ---- MAIN MAIN MAIN ------------------------------------------------------------
 # ################################################################################
 
-# Get Source and Destination Authorization Token/Strings
+# ################################################################################
+# Get Source Information and Material
+# ################################################################################
 print("\n Accessing Source and Destination Hosts and collecting Authorization Strings...")
 
 if listOnly != listOnlyOption.DESTINATION.value:
@@ -236,7 +239,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
             # in the object string looks like "Symmetric Key (128) Secret Data (4)" where the number within the parenthasis is the quantity of 
             # symmetric keys or secret objects.
 
-            t_objStr = t_objStr.rstrip() # remove leading and trailing white space
+            t_objStr = t_objStr.strip() # remove leading and trailing white space
             t_objStr = t_objStr.replace(' (', ', (') # Replace spaces before parenthasis with commas for easier parsing
             t_objStr = t_objStr.replace(') ', '), ') # Replace spaces before parenthasis with commas for easier parsing
             t_objStr = t_objStr.replace(' (', '') # Remove leading parenthasis
@@ -341,7 +344,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
                 t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_originalClientUserList)
 
     # Once list of clients has been parse, if the srcClientName was specified but it is not present (or has no keys),
-    # then bail and make the user coorect and resubmit the command.
+    # then bail and make the user correct and resubmit the command.
     if len(srcClientName) > 0: 
         if srcClientFound == False:
             tmpStr = "\n    ERROR: Client Name %s not found in list of available clients. Please try again." %(srcClientName)
@@ -366,10 +369,9 @@ if listOnly != listOnlyOption.DESTINATION.value:
         # srcSecretObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
     # After iterating through all of the clients in the source, report the total of all key and secret material in the list
-    srcKeyObjCnt        = len(srcKeyObjDataList)
-    srcSecretObjCnt     = len(srcSecretObjDataList)
+    srcKeyObjCnt        = len(srcKeyObjDataList)    # Key Objects
+    srcSecretObjCnt     = len(srcSecretObjDataList) # Secret Objects
 
-        
     if listOnly != listOnlyOption.DESTINATION.value:
         print("\n Number of Src List Keys: ", srcKeyListCnt)
         print(" Number of filtered and exportable Src Key Objects: ", srcKeyObjCnt)
@@ -381,6 +383,9 @@ if listOnly != listOnlyOption.DESTINATION.value:
 
         print("\n --- SRC OBJECT RETRIEVAL COMPLETE --- \n")
 
+# ################################################################################
+# Get Destiation Information and Material
+# ################################################################################
 if listOnly != listOnlyOption.SOURCE.value:
     dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
     print("  * Destination Access Confirmed *")
@@ -411,12 +416,16 @@ if listOnly == listOnlyOption.NEITHER.value:
 # Create and upload all of the key objects to the destination unless a flag to LIST ONLY has been specified. 
 ########################################################################################################### 
 
-    #  Map GKLM keys and values to CM
+    #  Create Key object dictionary and list to map GKLM keys and values to CM
     xKeyObj     = {}
     xKeyObjList = []
 
-    # -------------- MAPPING ------------------------------------------------------------------------ 
-    # For each key object in the source, map it with the proper dictionary keys to a x-formed list of 
+    #  Create Secret object dictionary and list to map GKLM keys and values to CM
+    xSecretObj     = {}
+    xSecretObjList = []
+
+    # -------------- KEY OBJECT MAPPING ------------------------------------------------------------- 
+    # For each KEY object in the source, map it with the proper dictionary keys to a x-formed list of 
     # dictionaries for later upload to the destination
     # -----------------------------------------------------------------------------------------------
     for k in range(srcKeyObjCnt):
@@ -459,14 +468,63 @@ if listOnly == listOnlyOption.NEITHER.value:
         xKeyObjList.append(xKeyObj.copy())
         # print("\n Key Obj: ", json.dumps(xKeyObj, skipkeys = True, allow_nan = True, indent = 3))
 
-    # ----------------------------------------------------------------
-    # Now that the keys have been read and mapped, send them to the
-    # destiation.  
+
+    # -------------- SECRET OBJECT MAPPING ------------------------------------------------------------- 
+    # For each SECRET object in the source, map it with the proper dictionary keys to a x-formed list of 
+    # dictionaries for later upload to the destination
+    # -----------------------------------------------------------------------------------------------
+    for k in range(srcSecretObjCnt):
+        # xSecretObj[CMAttributeType.UUID.value]         = srcSecretObjDataList[k][GKLMAttributeType.UUID.value]
+
+        # GKLM stores the Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
+        # The GKLM Usage Mask string must be replaced with the appropriate value before storing it in CM.
+        srcUM       = srcSecretObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value]
+        xSecretObj[CMAttributeType.USAGE_MASK.value]   = CryptographicUsageMask.NULL.value # initiate UM to null
+
+        for tmpUM in CryptographicUsageMask:
+            if tmpUM.name in srcUM:
+                xSecretObj[CMAttributeType.USAGE_MASK.value]  = xSecretObj[CMAttributeType.USAGE_MASK.value] | tmpUM.value # OR the usage values
+
+
+        # GKLM does not use alias for Secrets.  So we are copying the Name into the CM Alias.  
+        # However, GKLM includes brakcets ("[]") in the string and they need to be removed 
+        # before copying the true name value to CM
+
+        t_nameStrDict = bracketsToDict(srcSecretObjDataList[k][GKLMAttributeType.NAME.value])
+        xSecretObj[CMAttributeType.NAME.value] = t_nameStrDict[GKLMAttributeType.NAME_VALUE.value]
+
+        # Copy name into Alias component of dst object
+        t_aliasList = [{CMAliasesAttribute.ALIAS.value:t_nameStrDict[GKLMAttributeType.NAME_VALUE.value], CMAliasesAttribute.TYPE.value:"string", CMAliasesAttribute.INDEX.value:0}]
+        xSecretObj[CMAttributeType.ALIASES.value] = t_aliasList
+
+        xSecretObj[CMAttributeType.STATE.value]         = srcSecretObjDataList[k][GKLMAttributeType.SECRET_STATE.value]
+        xSecretObj[CMAttributeType.ALGORITHM.value]     = CMSecretAlgorithType.SECRET_SEED.value # CM seems to store them all as "SECRETESEED"
+        xSecretObj[CMAttributeType.OBJECT_TYPE.value]   = CMSecretObjectType.SECRET_DATA.value # CM seems to store them all as "Secret Data"
+        xSecretObj[CMAttributeType.SIZE.value]          = int(srcSecretObjDataList[k][GKLMAttributeType.SECRET_CRYPOGRAPHIC_LENGTH.value])
+
+        # In GKLM, the Secret Object Type appears as "PASSWORD".  However, CM uses the term "Secret Data" for 
+        # CM Object Type and "seed" for Data Type.  Let's copy the OBJECT TYPE string for now into CMs dataType.
+
+        xSecretObj[CMSecretAttributeType.DATA_TYPE.value] = srcSecretObjDataList[k][GKLMAttributeType.TYPE.value]
+
+        # Finally, copy the actual material and format
+        xSecretObj[CMAttributeType.MATERIAL.value]     = srcSecretObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
+        xSecretObj[CMAttributeType.FORMAT.value]       = srcSecretObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
+        
+        # Add a userID to the associated Secret object so it can be made owner of the Secret
+        # when uploaded to CM
+        xSecretObj[CMAttributeType.META.value]= {CMAttributeType.OWNER_ID.value: CM_userID}
+
+        # After assembling the Secret object, append it to the list of other Secret objects
+        xSecretObjList.append(xSecretObj.copy())
+        print("\n Secret Obj: ", json.dumps(xSecretObj, skipkeys = True, allow_nan = True, indent = 3))
+   
+    # ----------------------------------------------------------------------------------------------
+    # Now that the keys have been read and mapped, send them to the destiation.  
     #
-    # The first step is to ensure that if the dstUserGroup name is
-    # provided, that it exists on the destination server.  If it does
-    # not exist, create it and add the dstUsr to the group.
-    # ----------------------------------------------------------------
+    # The first step is to ensure that if the dstUserGroup name is provided, that it exists on the
+    # destination server.  If it does not exist, create it and add the dstUsr to the group.
+    # ----------------------------------------------------------------------------------------------
 
     if args.dstUserGroupName is not None:
         if t_flagGroupIsAbsent:
@@ -490,7 +548,7 @@ if listOnly == listOnlyOption.NEITHER.value:
                 
                 addDataObjectToGroup(dstHost, dstPort, dstUserGroupName, dstAuthStr, xKeyObjFromDst)
 
-        
+    # TODO  Need to add importation of Secret Objects Here
 
 if listOnly != listOnlyOption.SOURCE.value:
 ###########################################################################################################        
