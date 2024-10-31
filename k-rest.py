@@ -490,14 +490,15 @@ if listOnly == listOnlyOption.NEITHER.value:
         # However, GKLM includes brakcets ("[]") in the string and they need to be removed 
         # before copying the true name value to CM
 
-        t_nameStrDict = bracketsToDict(srcSecretObjDataList[k][GKLMAttributeType.NAME.value])
-        xSecretObj[CMAttributeType.NAME.value] = t_nameStrDict[GKLMAttributeType.NAME_VALUE.value]
+        t_nameStrDict   = bracketsToDict(srcSecretObjDataList[k][GKLMAttributeType.NAME.value])
+        t_name          = t_nameStrDict[GKLMAttributeType.NAME_VALUE.value]
+        xSecretObj[CMAttributeType.NAME.value] = t_name
 
         # Copy name into Alias component of dst object
         t_aliasList = [{CMAliasesAttribute.ALIAS.value:t_nameStrDict[GKLMAttributeType.NAME_VALUE.value], CMAliasesAttribute.TYPE.value:"string", CMAliasesAttribute.INDEX.value:0}]
         xSecretObj[CMAttributeType.ALIASES.value] = t_aliasList
 
-        xSecretObj[CMAttributeType.STATE.value]         = srcSecretObjDataList[k][GKLMAttributeType.SECRET_STATE.value]
+        xSecretObj[CMAttributeType.STATE.value]         = srcSecretObjDataList[k][GKLMAttributeType.SECRET_STATE.value].replace("_","-").title()
         xSecretObj[CMAttributeType.ALGORITHM.value]     = CMSecretAlgorithType.SECRET_SEED.value # CM seems to store them all as "SECRETESEED"
         xSecretObj[CMAttributeType.OBJECT_TYPE.value]   = CMSecretObjectType.SECRET_DATA.value # CM seems to store them all as "Secret Data"
         xSecretObj[CMAttributeType.SIZE.value]          = int(srcSecretObjDataList[k][GKLMAttributeType.SECRET_CRYPOGRAPHIC_LENGTH.value])
@@ -505,7 +506,7 @@ if listOnly == listOnlyOption.NEITHER.value:
         # In GKLM, the Secret Object Type appears as "PASSWORD".  However, CM uses the term "Secret Data" for 
         # CM Object Type and "seed" for Data Type.  Let's copy the OBJECT TYPE string for now into CMs dataType.
 
-        xSecretObj[CMSecretAttributeType.DATA_TYPE.value] = srcSecretObjDataList[k][GKLMAttributeType.TYPE.value]
+        xSecretObj[CMSecretAttributeType.DATA_TYPE.value] = str(srcSecretObjDataList[k][GKLMAttributeType.TYPE.value]).lower()
 
         # Finally, copy the actual material and format
         xSecretObj[CMAttributeType.MATERIAL.value]     = srcSecretObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
@@ -532,7 +533,10 @@ if listOnly == listOnlyOption.NEITHER.value:
             addDstUsrToGroup(dstHost, dstPort, dstAuthStr, CM_userNickname, CM_userID, dstUserGroupName)
             print(" * ", dstUserGroupName, "group configuration complete. * ")
     
-    print("\nImporting key material into destination...")
+    # ----------------------------------------------------------------------------------------------
+    # IMPORT Key Material into Destination
+    # ----------------------------------------------------------------------------------------------
+    print("\n*** Importing KEY material into destination... ***")
     
     for xKeyObj in xKeyObjList:
         t_keyObjName = xKeyObj[CMAttributeType.NAME.value]
@@ -541,14 +545,27 @@ if listOnly == listOnlyOption.NEITHER.value:
         print(" --> importDstDataKeyOjbect Success:", success)
         
         # After the object has been successfully created, assign it to the Group, if one has been provided.
-        
         if success:
             if args.dstUserGroupName is not None:
-                xKeyObjFromDst = getDstKeyByName(dstHost, dstPort, dstAuthStr, t_keyObjName)
-                
+                xKeyObjFromDst = getDstKeyByName(dstHost, dstPort, dstAuthStr, t_keyObjName)                
                 addDataObjectToGroup(dstHost, dstPort, dstUserGroupName, dstAuthStr, xKeyObjFromDst)
 
-    # TODO  Need to add importation of Secret Objects Here
+    # ----------------------------------------------------------------------------------------------
+    # IMPORT Secret Material into Destination
+    # ----------------------------------------------------------------------------------------------
+    print("\n*** Importing SECRET material into destination... ***")
+    
+    for xSecretObj in xSecretObjList:
+        t_SecretObjName = xSecretObj[CMAttributeType.NAME.value]
+        print("\n xSecretObjName: ",  t_SecretObjName)    
+        success = importDstDataSecretObject(dstHost, dstPort, dstUser, dstAuthStr, xSecretObj)
+        print(" --> importDstDataSecretOjbect Success:", success)
+        
+        # After the object has been successfully created, assign it to the Group, if one has been provided.
+        if success:
+            if args.dstUserGroupName is not None:
+                xSecretObjFromDst = getDstKeyByName(dstHost, dstPort, dstAuthStr, t_SecretObjName)                
+                addDataObjectToGroup(dstHost, dstPort, dstUserGroupName, dstAuthStr, xSecretObjFromDst)
 
 if listOnly != listOnlyOption.SOURCE.value:
 ###########################################################################################################        

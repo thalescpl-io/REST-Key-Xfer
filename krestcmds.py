@@ -70,21 +70,24 @@ def bracketsToDict(t_stringWithBrackets):
 # -------------------------------------------------------------------------------
     t_dict  = {}     # create now to return later
 
-    t_nameStr = t_stringWithBrackets.strip()    # remove leading and trailing spaces
-    t_nameStr = t_nameStr.strip('[[')           # remove leading and trailing spaces
-    t_nameStr = t_nameStr.strip(']]')           # remove leading and trailing spaces
-    t_nameStr = t_nameStr.replace(' [', ', [')  # Replace spaces before brackets with commas for easier parsing
-    t_nameStr = t_nameStr.replace('] ', '], ')  # Replace spaces before brackets with commas for easier parsing
-    t_nameStr = t_nameStr.replace(' [', '')     # Remove leading brackets
-    t_nameStr = t_nameStr.replace(']', '')      # Remove trailing brackets
+    t_nameStr = t_stringWithBrackets.strip()    # cleanup - remove leading and trailing spaces
+    t_nameStr = t_nameStr.replace(',','')         # cleanup - remove commas
+    t_nameStr = t_nameStr.replace('[[', '[')    # remove leading bracket for string
+    t_nameStr = t_nameStr.replace(']]', "]")    # remove trailing brackeet for string
 
-    t_nameStrList = t_nameStr.split(',') # create a list of the elements in the string.  Note elements are separated by a comma
+    # Create a substring and eat through it, separating the bracketed data (e.g. [KEY1 VALUE1] [KEY2 VALUE2] ...)
+    # Start loop and continue until leading brackets are gone.
 
-    for element in t_nameStrList:
-        t_split     = element.split()
-        t_key       = t_split[0]
-        t_value     = t_split[1]
-        t_dict[t_key]  = t_value
+    while "[" in t_nameStr:
+        t_beginBracketPos   = t_nameStr.find("[")
+        t_endBracketPos     = t_nameStr.find("]")
+        t_subStr            = t_nameStr[t_beginBracketPos+1:t_endBracketPos]    # exclude brackets
+        t_split             = t_subStr.split()                                  # break into two pieces
+        t_key               = t_split[0]
+        t_value             = t_split[1]
+        t_dict[t_key]       = t_value
+
+        t_nameStr = t_nameStr[t_endBracketPos+1:]  # discard substring by moving beginning of string forward
 
     return t_dict
 
@@ -384,7 +387,7 @@ def convertGKLMHashToString(t_GKLMHash):
     t_Header    = "[VALUE "     # string that preceeds the hash value
     t_sizeH     = len(t_Header)
     t_Trailer   = " [DIGESTED"  # first few characters of string at end of hash value
-    t_chars     = "[^0-9a-f]"          # only characters that need to be kept
+    t_chars     = "[^0-9a-f]"   # only characters that need to be kept
     
     t_startPos  = t_GKLMHash.find(t_Header)
     t_endPos    = t_GKLMHash.find(t_Trailer)
@@ -432,30 +435,37 @@ def printSrcSecretObjDataList(t_srcSecretObjDataList):
 
     t_success           = True
     t_ListLen           = len(t_srcSecretObjDataList)
+    t_chars             = "[^0-9a-f]"   # only characters that need to be kept
         
     for obj in range(t_ListLen):
         
         # Separate string conversions before sending.  
-        # Python gets confused if they are all converted as part of the string assembly of tmpStr.  tmpStr.strip("[]")
         
-        # t_alias     = str(t_srcSecretObjDataList[obj][GKLMAttributeType.ALIAS.value])
-        t_uuid        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.UUID.value])
-        t_type        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.TYPE.value])
-        # t_hv        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.DIGEST.value])
-        t_client    = str(t_srcSecretObjDataList[obj][GKLMAttributeType.CLIENT_NAME.value])
+        # The NameString is a little funky.  It comes with other stuff.  You want the "VALUE" key of the name string.
+        t_nameStr       = str(t_srcSecretObjDataList[obj][GKLMAttributeType.NAME.value])
+        t_nameDict      = bracketsToDict(t_nameStr)
+        t_alias         = str(t_nameDict[GKLMAttributeType.NAME_VALUE.value])
 
-        t_alias     = "alias"
-        t_hv        = "hv"
-        
+        t_uuid          = str(t_srcSecretObjDataList[obj][GKLMAttributeType.UUID.value])
+        t_type          = str(t_srcSecretObjDataList[obj][GKLMAttributeType.TYPE.value])
+
+        # Similar to the Name String, the Hash String comes with other stuff.  You want the "VALUE" key of the name string
+        t_digest        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.DIGEST.value])
+        t_digestDict    = bracketsToDict(t_digest)
+        t_hv            = re.sub(t_chars, '', str(t_digestDict[GKLMAttributeType.NAME_VALUE.value])) # strip out unwanted chars
+
+        t_client        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.CLIENT_NAME.value])
+
         tmpStr =    "\nSrc Secret Obj: %s"      \
                     "\n  Alias: %s"             \
                     "\n  UUID: %s"              \
                     "\n  Client Name: %s"       \
                     "\n  Secret Type: %s "         \
                     "\n  Hash: %s"              \
-                    %(obj, t_alias.strip("[]"), t_uuid, t_client, t_type, convertGKLMHashToString(t_hv))
+                    %(obj, t_alias, t_uuid, t_client, t_type, t_hv)
 
-        print(tmpStr)            
+        print(tmpStr)
+        # printJList("FullSRC:", t_srcSecretObjDataList[obj])
         
     return t_success
 
@@ -672,13 +682,20 @@ def printDstObjDataAndOwner(t_dstObjData, t_UserDict):
             t_ot    = str(t_dstObjData[obj][CMAttributeType.OBJECT_TYPE.value])
             t_fp    = str(t_dstObjData[obj][CMAttributeType.SHA256_FINGERPRINT.value])
             t_meta  = str(t_dstObjData[obj][CMAttributeType.META.value])
-            t_oID   = str(t_dstObjData[obj][CMAttributeType.META.value][CMAttributeType.OWNER_ID.value])
+
+            # Sometimes Meta is empty.
+            if CMAttributeType.OWNER_ID.value in t_meta:
+                t_oID   = str(t_dstObjData[obj][CMAttributeType.META.value][CMAttributeType.OWNER_ID.value])
+                t_owner = t_UserDict[t_oID]
+            else:
+                t_oID   = NULL
+                t_owner = NULL
+
             t_alias = str(t_dstObjData[obj][CMAttributeType.ALIASES.value][0][CMAliasesAttribute.ALIAS.value])
-            t_owner = t_UserDict[t_oID]
-            
+
             tmpStr  = "\nDst Obj: %s Name: %s" \
             "\n  UUID: %s" \
-            "\n  Key Type: %s" \
+            "\n  Object Type: %s" \
             "\n  Hash: %s" \
             "\n  OwnerID: %s (%s)" \
             "\n  Alias: %s" \
@@ -688,12 +705,13 @@ def printDstObjDataAndOwner(t_dstObjData, t_UserDict):
                     
         except Exception as e:
             t_success   = False
-            tmpStr      = "\nDst ObjE: %s Name: %s" \
+            tmpStr      = "\nDst Obj Error: %s Name: %s" \
             "\n  UUID: %s" \
-            "\n  Key Type: %s" \
+            "\n  Object Type: %s" \
             %(obj, t_name, t_uuid, t_ot)
 
         print(tmpStr)
+        # printJList("Full:", t_dstObjData[obj])
 
     return t_success
 
