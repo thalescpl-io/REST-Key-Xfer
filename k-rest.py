@@ -12,6 +12,7 @@ import  argparse
 import  binascii
 import  codecs
 import  hashlib
+from pickle import TRUE
 from tkinter.tix import TCL_ALL_EVENTS
 from    kerrors import *
 from    krestcmds import *
@@ -83,7 +84,10 @@ parser.add_argument("-listSrcClients", action="store_true", dest="listSrcClients
 listSrcClients = False   #set default to be false
 
 parser.add_argument("-resolveSrcClientOwnership", action="store_true", dest="resolveSrcClientOwnership", required=False)
-listSrcClients = False   #set default to be false
+resolveSrcClientOwnership = False   #set default to be false
+
+parser.add_argument("-includeSecrets", action="store_true", dest="includeSecrets", required=False)
+includeSecrets = False   #set default to be false
 
 # Args are returned as a LIST.  Separate them into individual strings
 args = parser.parse_args()
@@ -178,6 +182,12 @@ if args.srcClientName is not None:
 
 listSrcClients = args.listSrcClients
 addClientUser = args.resolveSrcClientOwnership
+
+# ------------- Secrets Flag ----------------------------------------
+# Set Secrets collection flag
+# -------------------------------------------------------------------
+includeSecrets = args.includeSecrets
+print(" Include Secrets:", includeSecrets)
 
 # ---- Command PARSING COMPLETE ----------------------------------------------------------
 
@@ -296,7 +306,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
                     srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of key objects
                     # -------------------------------------------------------------------------------------------------------
 
-                if int(t_secretCount) > 0:
+                if includeSecrets and int(t_secretCount) > 0:
                     tmpStr = "       Retrieving secret data information for %s... " %(t_clientName)
                     print(tmpStr)
 
@@ -328,7 +338,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
                 srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of key objects
                 # -------------------------------------------------------------------------------------------------------
 
-            if int(t_secretCount) > 0:
+            if includeSecrets and int(t_secretCount) > 0:
                 tmpStr = "       Retrieving secret data information for %s... " %(t_clientName)
                 print(tmpStr)
 
@@ -377,9 +387,10 @@ if listOnly != listOnlyOption.DESTINATION.value:
         print(" Number of filtered and exportable Src Key Objects: ", srcKeyObjCnt)
         printSrcKeyObjDataList(srcKeyObjDataList)
 
-        print("\n Number of Src List Secrets: ", srcSecretListCnt)
-        print(" Number of filtered and exportable Src Secret Objects: ", srcSecretObjCnt)
-        printSrcSecretObjDataList(srcSecretObjDataList)
+        if includeSecrets:
+            print("\n Number of Src List Secrets: ", srcSecretListCnt)
+            print(" Number of filtered and exportable Src Secret Objects: ", srcSecretObjCnt)
+            printSrcSecretObjDataList(srcSecretObjDataList)
 
         print("\n --- SRC OBJECT RETRIEVAL COMPLETE --- \n")
 
@@ -473,52 +484,53 @@ if listOnly == listOnlyOption.NEITHER.value:
     # For each SECRET object in the source, map it with the proper dictionary keys to a x-formed list of 
     # dictionaries for later upload to the destination
     # -----------------------------------------------------------------------------------------------
-    for k in range(srcSecretObjCnt):
-        # xSecretObj[CMAttributeType.UUID.value]         = srcSecretObjDataList[k][GKLMAttributeType.UUID.value]
+    if includeSecrets: 
+        for k in range(srcSecretObjCnt):
+            # xSecretObj[CMAttributeType.UUID.value]         = srcSecretObjDataList[k][GKLMAttributeType.UUID.value]
 
-        # GKLM stores the Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
-        # The GKLM Usage Mask string must be replaced with the appropriate value before storing it in CM.
-        srcUM       = srcSecretObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value]
-        xSecretObj[CMAttributeType.USAGE_MASK.value]   = CryptographicUsageMask.NULL.value # initiate UM to null
+            # GKLM stores the Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
+            # The GKLM Usage Mask string must be replaced with the appropriate value before storing it in CM.
+            srcUM       = srcSecretObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value]
+            xSecretObj[CMAttributeType.USAGE_MASK.value]   = CryptographicUsageMask.NULL.value # initiate UM to null
 
-        for tmpUM in CryptographicUsageMask:
-            if tmpUM.name in srcUM:
-                xSecretObj[CMAttributeType.USAGE_MASK.value]  = xSecretObj[CMAttributeType.USAGE_MASK.value] | tmpUM.value # OR the usage values
+            for tmpUM in CryptographicUsageMask:
+                if tmpUM.name in srcUM:
+                    xSecretObj[CMAttributeType.USAGE_MASK.value]  = xSecretObj[CMAttributeType.USAGE_MASK.value] | tmpUM.value # OR the usage values
 
 
-        # GKLM does not use alias for Secrets.  So we are copying the Name into the CM Alias.  
-        # However, GKLM includes brakcets ("[]") in the string and they need to be removed 
-        # before copying the true name value to CM
+            # GKLM does not use alias for Secrets.  So we are copying the Name into the CM Alias.  
+            # However, GKLM includes brakcets ("[]") in the string and they need to be removed 
+            # before copying the true name value to CM
 
-        t_nameStrDict   = bracketsToDict(srcSecretObjDataList[k][GKLMAttributeType.NAME.value])
-        t_name          = t_nameStrDict[GKLMAttributeType.NAME_VALUE.value]
-        xSecretObj[CMAttributeType.NAME.value] = t_name
+            t_nameStrDict   = bracketsToDict(srcSecretObjDataList[k][GKLMAttributeType.NAME.value])
+            t_name          = t_nameStrDict[GKLMAttributeType.NAME_VALUE.value]
+            xSecretObj[CMAttributeType.NAME.value] = t_name
 
-        # Copy name into Alias component of dst object
-        t_aliasList = [{CMAliasesAttribute.ALIAS.value:t_nameStrDict[GKLMAttributeType.NAME_VALUE.value], CMAliasesAttribute.TYPE.value:"string", CMAliasesAttribute.INDEX.value:0}]
-        xSecretObj[CMAttributeType.ALIASES.value] = t_aliasList
+            # Copy name into Alias component of dst object
+            t_aliasList = [{CMAliasesAttribute.ALIAS.value:t_nameStrDict[GKLMAttributeType.NAME_VALUE.value], CMAliasesAttribute.TYPE.value:"string", CMAliasesAttribute.INDEX.value:0}]
+            xSecretObj[CMAttributeType.ALIASES.value] = t_aliasList
 
-        xSecretObj[CMAttributeType.STATE.value]         = srcSecretObjDataList[k][GKLMAttributeType.SECRET_STATE.value].replace("_","-").title()
-        xSecretObj[CMAttributeType.ALGORITHM.value]     = CMSecretAlgorithType.SECRET_SEED.value # CM seems to store them all as "SECRETESEED"
-        xSecretObj[CMAttributeType.OBJECT_TYPE.value]   = CMSecretObjectType.SECRET_DATA.value # CM seems to store them all as "Secret Data"
-        xSecretObj[CMAttributeType.SIZE.value]          = int(srcSecretObjDataList[k][GKLMAttributeType.SECRET_CRYPOGRAPHIC_LENGTH.value])
+            xSecretObj[CMAttributeType.STATE.value]         = srcSecretObjDataList[k][GKLMAttributeType.SECRET_STATE.value].replace("_","-").title()
+            xSecretObj[CMAttributeType.ALGORITHM.value]     = CMSecretAlgorithType.SECRET_SEED.value # CM seems to store them all as "SECRETESEED"
+            xSecretObj[CMAttributeType.OBJECT_TYPE.value]   = CMSecretObjectType.SECRET_DATA.value # CM seems to store them all as "Secret Data"
+            xSecretObj[CMAttributeType.SIZE.value]          = int(srcSecretObjDataList[k][GKLMAttributeType.SECRET_CRYPOGRAPHIC_LENGTH.value])
 
-        # In GKLM, the Secret Object Type appears as "PASSWORD".  However, CM uses the term "Secret Data" for 
-        # CM Object Type and "seed" for Data Type.  Let's copy the OBJECT TYPE string for now into CMs dataType.
+            # In GKLM, the Secret Object Type appears as "PASSWORD".  However, CM uses the term "Secret Data" for 
+            # CM Object Type and "seed" for Data Type.  Let's copy the OBJECT TYPE string for now into CMs dataType.
 
-        xSecretObj[CMSecretAttributeType.DATA_TYPE.value] = str(srcSecretObjDataList[k][GKLMAttributeType.TYPE.value]).lower()
+            xSecretObj[CMSecretAttributeType.DATA_TYPE.value] = str(srcSecretObjDataList[k][GKLMAttributeType.TYPE.value]).lower()
 
-        # Finally, copy the actual material and format
-        xSecretObj[CMAttributeType.MATERIAL.value]     = srcSecretObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
-        xSecretObj[CMAttributeType.FORMAT.value]       = srcSecretObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
+            # Finally, copy the actual material and format
+            xSecretObj[CMAttributeType.MATERIAL.value]     = srcSecretObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
+            xSecretObj[CMAttributeType.FORMAT.value]       = srcSecretObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
         
-        # Add a userID to the associated Secret object so it can be made owner of the Secret
-        # when uploaded to CM
-        xSecretObj[CMAttributeType.META.value]= {CMAttributeType.OWNER_ID.value: CM_userID}
+            # Add a userID to the associated Secret object so it can be made owner of the Secret
+            # when uploaded to CM
+            xSecretObj[CMAttributeType.META.value]= {CMAttributeType.OWNER_ID.value: CM_userID}
 
-        # After assembling the Secret object, append it to the list of other Secret objects
-        xSecretObjList.append(xSecretObj.copy())
-        print("\n Secret Obj: ", json.dumps(xSecretObj, skipkeys = True, allow_nan = True, indent = 3))
+            # After assembling the Secret object, append it to the list of other Secret objects
+            xSecretObjList.append(xSecretObj.copy())
+            # print("\n Secret Obj: ", json.dumps(xSecretObj, skipkeys = True, allow_nan = True, indent = 3))
    
     # ----------------------------------------------------------------------------------------------
     # Now that the keys have been read and mapped, send them to the destiation.  
@@ -553,19 +565,20 @@ if listOnly == listOnlyOption.NEITHER.value:
     # ----------------------------------------------------------------------------------------------
     # IMPORT Secret Material into Destination
     # ----------------------------------------------------------------------------------------------
-    print("\n*** Importing SECRET material into destination... ***")
+    if includeSecrets:
+        print("\n*** Importing SECRET material into destination... ***")
     
-    for xSecretObj in xSecretObjList:
-        t_SecretObjName = xSecretObj[CMAttributeType.NAME.value]
-        print("\n xSecretObjName: ",  t_SecretObjName)    
-        success = importDstDataSecretObject(dstHost, dstPort, dstUser, dstAuthStr, xSecretObj)
-        print(" --> importDstDataSecretOjbect Success:", success)
+        for xSecretObj in xSecretObjList:
+            t_SecretObjName = xSecretObj[CMAttributeType.NAME.value]
+            print("\n xSecretObjName: ",  t_SecretObjName)    
+            success = importDstDataSecretObject(dstHost, dstPort, dstUser, dstAuthStr, xSecretObj)
+            print(" --> importDstDataSecretOjbect Success:", success)
         
-        # After the object has been successfully created, assign it to the Group, if one has been provided.
-        if success:
-            if args.dstUserGroupName is not None:
-                xSecretObjFromDst = getDstKeyByName(dstHost, dstPort, dstAuthStr, t_SecretObjName)                
-                addDataObjectToGroup(dstHost, dstPort, dstUserGroupName, dstAuthStr, xSecretObjFromDst)
+            # After the object has been successfully created, assign it to the Group, if one has been provided.
+            if success:
+                if args.dstUserGroupName is not None:
+                    xSecretObjFromDst = getDstKeyByName(dstHost, dstPort, dstAuthStr, t_SecretObjName)                
+                    addDataObjectToGroup(dstHost, dstPort, dstUserGroupName, dstAuthStr, xSecretObjFromDst)
 
 if listOnly != listOnlyOption.SOURCE.value:
 ###########################################################################################################        
@@ -585,4 +598,3 @@ if listOnly != listOnlyOption.SOURCE.value:
     
 
 #####################################################################################
-#
