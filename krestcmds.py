@@ -700,8 +700,6 @@ def printDstObjDataAndOwner(t_dstObjData, t_UserDict):
             "\n  OwnerID: %s (%s)" \
             "\n  Alias: %s" \
             %(obj, t_name, t_uuid, t_ot, t_fp, t_oID, t_owner, t_alias)
-            # "\n  Meta: %s" \
-            # %(obj, t_name, t_uuid, t_ot, t_fp, t_oID, t_owner, t_meta)
                     
         except Exception as e:
             t_success   = False

@@ -69,18 +69,16 @@ def createNameValueDict(t_str):
     return t_nvPairDict
         
     
-def filterNetAppSrcKeyObjDataList(t_srcKeyObjDataList, t_netAppFilterDict):
+def filterNetAppObjDataList(t_ObjDataList, t_netAppFilterDict):
 # -----------------------------------------------------------------------------
-# Filters KeyObjDataList by the NetApp filter definitions described by user.
+# Filters ObjDataList by the NetApp filter definitions described by user.
 #
-# Using the neAppFilterDict Dictionary, filter the srcKeyObjDataList such that 
+# Using the neAppFilterDict Dictionary, filter the srcObjDataList such that 
 # only those keys satisfy all of the defined filters are returned.
 # -----------------------------------------------------------------------------
     
-    t_ListLen           = len(t_srcKeyObjDataList)
-
+    t_ListLen           = len(t_ObjDataList)
     t_filteredList      = [] # created list to be returned later
-    t_cnt               = 0  # keep track of the number of exportable key objects
     
     # -------------------------------------------------------------------------
     # For each object in the Object Data List, you will need to check for the
@@ -93,15 +91,13 @@ def filterNetAppSrcKeyObjDataList(t_srcKeyObjDataList, t_netAppFilterDict):
     # --------------------------------------------------------------------------
     
     for obj in range(t_ListLen):
-        t_srcObjAlias   = t_srcKeyObjDataList[obj][GKLMAttributeType.ALIAS.value]
-        t_srcObjUUID   = t_srcKeyObjDataList[obj][GKLMAttributeType.UUID.value]
         
         # Check for the presence of the 'Custom Attributes' field    
-        if GKLMAttributeType.CUSTOM_ATTRIBUTES.value in t_srcKeyObjDataList[obj]: 
+        if GKLMAttributeType.CUSTOM_ATTRIBUTES.value in t_ObjDataList[obj]: 
             
             # Since the Custom Attributes field is present, proceed with retrieving the list of
             # custom attributes.
-            t_CustAttribStr = t_srcKeyObjDataList[obj][GKLMAttributeType.CUSTOM_ATTRIBUTES.value]
+            t_CustAttribStr = t_ObjDataList[obj][GKLMAttributeType.CUSTOM_ATTRIBUTES.value]
             
             # Note.  This is ugly.  The NetApp Custom Attributes are a single list of strings with brackets...
             # I.e. "Custom Attributes": "[[NAME x-NETAPP-KeyId] [[INDEX 0] [TYPE JAVA_STRING] 
@@ -115,12 +111,11 @@ def filterNetAppSrcKeyObjDataList(t_srcKeyObjDataList, t_netAppFilterDict):
             t_objNameValueDict = createNameValueDict(t_CustAttribStr)
 
             # Before checking for the presence of each of the dictionary attributes/keys, assume they are
-            # present in the list until one is not discovered.
+            # present in the list until one is NOT discovered.
             addObjToFilteredList = True # default
                     
             for netAppAttrib in t_netAppFilterDict.keys():
                 netAppAttribVal = t_netAppFilterDict.get(netAppAttrib)
-                t_strValue = "" 
                 
                 # Now check to see if the netAppAttribute is in the nameValueDictionary.
                 # If the attribute is present, check for the presence of the search value in t_dictAttribValue.  
@@ -129,14 +124,14 @@ def filterNetAppSrcKeyObjDataList(t_srcKeyObjDataList, t_netAppFilterDict):
                 if netAppAttrib in t_objNameValueDict:
                     t_objDictAttribValue = t_objNameValueDict[netAppAttrib]
                     if netAppAttribVal in t_objDictAttribValue:
-                        addObjToFilteredList = addObjToFilteredList and True
+                        addObjToFilteredList = addObjToFilteredList and True # Is this correct logic?  Should it be a bitwise AND (&)?
                     else:
-                        addObjToFilteredList = False    # exclude object from filtered list since value is now found
+                        addObjToFilteredList = False    # exclude object from filtered list since value is not found
                 else:
-                    addObjToFilteredList = False        # exclude object from filtered list since name is now found
+                    addObjToFilteredList = False        # exclude object from filtered list since name is not found
                     
             # If all NetApp Attributes are found in the Custom Attributes field of the object, then save the Obj
             if addObjToFilteredList == True:
-                t_filteredList.append(t_srcKeyObjDataList[obj])
+                t_filteredList.append(t_ObjDataList[obj])
                 
     return t_filteredList

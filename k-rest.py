@@ -141,7 +141,7 @@ if args.dstUserGroupName is not None:
 # Collect the list only filter value and print it
 # ---------------------------------------------------------------------
 listOnly = str(" ".join(args.listOnly))
-print("\n ListOnly:", listOnly)
+print(" ListOnly:", listOnly)
 
 # ---- List srcUUID ---------------------------------------------------
 # Collect the UUID string and print it
@@ -188,6 +188,8 @@ addClientUser = args.resolveSrcClientOwnership
 # -------------------------------------------------------------------
 includeSecrets = args.includeSecrets
 print(" Include Secrets:", includeSecrets)
+
+print("\n--------------- PROCESSING -----------------------------------------------")
 
 # ---- Command PARSING COMPLETE ----------------------------------------------------------
 
@@ -353,7 +355,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
                 t_originalClientUserList = clientList[client][GKLMAttributeType.CLIENT_USERS.value] # retrieve original list of users
                 t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_originalClientUserList)
 
-    # Once list of clients has been parse, if the srcClientName was specified but it is not present (or has no keys),
+    # Once list of clients has been parsed, if the srcClientName was specified but it is not present (or has no keys),
     # then bail and make the user correct and resubmit the command.
     if len(srcClientName) > 0: 
         if srcClientFound == False:
@@ -371,12 +373,12 @@ if listOnly != listOnlyOption.DESTINATION.value:
     # If the length of the NetApp filter (dictionary) is greater than zero, apply NetApp filter.
     if len(srcNetAppFilterDict) > 0:
         # filter key objects against NetAP dictionary
-        t_srcFilteredList = filterNetAppSrcKeyObjDataList(srcKeyObjDataList, srcNetAppFilterDict)
+        t_srcFilteredList = filterNetAppObjDataList(srcKeyObjDataList, srcNetAppFilterDict)
         srcKeyObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
         # filter secret objects against NetAPP dictionary
-        # FIXTHIS t_srcFilteredList = filterNetAppSrcKeyObjDataList(srcSecretObjDataList, srcNetAppFilterDict)
-        # srcSecretObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
+        t_srcFilteredList = filterNetAppObjDataList(srcSecretObjDataList, srcNetAppFilterDict)
+        srcSecretObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
     # After iterating through all of the clients in the source, report the total of all key and secret material in the list
     srcKeyObjCnt        = len(srcKeyObjDataList)    # Key Objects
@@ -466,9 +468,7 @@ if listOnly == listOnlyOption.NEITHER.value:
         tmpStr2 = tmpStr.replace("_", " ")  # SYMMETRIC_KEY -> SYMMETRIC KEY
         
         xKeyObj[CMAttributeType.OBJECT_TYPE.value]  = tmpStr2.title()   # SYMMETRIC KEY -> Symmetric Key
-
         xKeyObj[CMAttributeType.MATERIAL.value]     = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
-        
         xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
         
         # Add a userID to the associated key object so it can be made owner of the key
@@ -588,7 +588,12 @@ if listOnly != listOnlyOption.SOURCE.value:
     print("\nRetrieving list of objects from destination...")
     dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
     print("\nDst Object List Count: ", len(dstObjList))
-    
+
+    # Filter and show NetApp specific information.
+    if len(srcNetAppFilterDict) > 0:
+        t_FilteredList = filterNetAppObjDataList(dstObjList, srcNetAppFilterDict)
+        dstObjList = t_FilteredList   # replace key obj data list with filtered list
+        
     dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
     dstExpObjCnt    = len(dstObjData)
     print("Dst Exportable Data Object Count: ", dstExpObjCnt)
