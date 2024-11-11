@@ -189,7 +189,7 @@ addClientUser = args.resolveSrcClientOwnership
 includeSecrets = args.includeSecrets
 print(" Include Secrets:", includeSecrets)
 
-print("\n--------------- PROCESSING -----------------------------------------------")
+print("\n--------------- PROCESSING -----------------------------------------------\n")
 
 # ---- Command PARSING COMPLETE ----------------------------------------------------------
 
@@ -200,7 +200,6 @@ print("\n--------------- PROCESSING --------------------------------------------
 # ################################################################################
 # Get Source Information and Material
 # ################################################################################
-print("\n Accessing Source and Destination Hosts and collecting Authorization Strings...")
 
 if listOnly != listOnlyOption.DESTINATION.value:
     srcAuthStr      = createSrcAuthStr(srcHost, srcPort, srcUser, srcPass)

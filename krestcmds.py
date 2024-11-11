@@ -4,6 +4,7 @@
 # with the source and destination servers
 #
 ######################################################################
+from secrets import token_bytes
 import  requests
 from    urllib3.exceptions import InsecureRequestWarning
 import  json
@@ -507,24 +508,57 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
 # 
 # The objective of this section is to use the Dst Authorization / Bearer Token
 # to query the dst hosts REST interface about keys.
+#
+# Note that the list returns only 10 keys per query.  As such, we are going to
+# define a batch limit and make multiple queries to the CipherTrust Server
 # -----------------------------------------------------------------------------
 
-    t_dstRESTKeyList        = DST_REST_PREAMBLE + "vault/keys2"
-    t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList)   
+    t_batchLimit            = 500   # 500 keys per retreival
+    t_batchSkip             = 0     # skip or offset into object count
+    t_batchObjSkip          = t_batchLimit * t_batchSkip
+    t_dstObjCnt             = 0
 
     t_dstHeaders            = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization": t_dstAuthStr}
+
+    # Process all keys per the size of the t_batchLimit until you have retrieved all of them.
+
+    t_dstRESTKeyList        = "%svault/keys2/?skip=%s&limit=%s" %(DST_REST_PREAMBLE, t_batchObjSkip, t_batchLimit)
+    t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList)   
 
     # Note that this REST Command does not require a body object in this GET REST Command
     r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
 
     if(r.status_code != STATUS_CODE_OK):
-        kPrintError("getDstObjList", r)
+        tmpStr = "getDstObjList: t_batchLimit:%s t_batchSkip:%s t_batchObSkip:%s t_dskObjCnt:%s" %(t_batchLimit, t_batchSkip, t_batchObjSkip, t_dstObjCnt)
+        kPrintError(tmpStr, r)
         exit()
 
-    t_dstObjList           = r.json()[CMAttributeType.RESOURCES.value]
+    t_dstFinalObjList       = r.json()[CMAttributeType.RESOURCES.value]
+    t_dstObjCnt             = len(t_dstFinalObjList)
+    t_dstObjTotalCnt        = r.json()[CMAttributeType.TOTAL.value]
 
-    # print("\n         Dst Objects: ", t_dstObjList[0].keys())
-    return t_dstObjList
+    # After the initial retreival, we have access to the total number of objects.
+    # From there, determine, now many more iterations are requied.
+    while t_dstObjTotalCnt > t_dstObjCnt:
+        t_batchSkip             = t_batchSkip + 1               # iterate to next batch
+        t_batchObjSkip          = t_batchLimit * t_batchSkip    # calculate number of objects to skip
+
+        t_dstRESTKeyList        = "%svault/keys2/?skip=%s&limit=%s" %(DST_REST_PREAMBLE, t_batchObjSkip, t_batchLimit)
+        t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList)   
+
+        # Note that this REST Command does not require a body object in this GET REST Command
+        r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
+
+        if(r.status_code != STATUS_CODE_OK):
+            tmpStr = "getDstObjList: t_batchLimit:%s t_batchSkip:%s t_batchObSkip:%s t_dskObjCnt:%s" %(t_batchLimit, t_batchSkip, t_batchObjSkip, t_dstObjCnt)
+            kPrintError(tmpStr, r)
+            exit()
+
+        t_dstObjList       = r.json()[CMAttributeType.RESOURCES.value]
+        t_dstFinalObjList.append(t_dstObjList)
+
+    # print("\n         Dst Objects: ",  t_dstFinalObjList[0].keys())
+    return t_dstFinalObjList
     
 def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
 # -----------------------------------------------------------------------------

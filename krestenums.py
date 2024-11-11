@@ -176,6 +176,7 @@ class CMAttributeType(enum.Enum):
     FORMAT                      = 'format'
     OWNER_ID                    = 'ownerId'
     RESOURCES                   = 'resources'
+    TOTAL                       = 'total'
 
 class CMAliasesAttribute(enum.Enum):
     ALIAS                       = 'alias'
