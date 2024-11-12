@@ -509,7 +509,7 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
 # The objective of this section is to use the Dst Authorization / Bearer Token
 # to query the dst hosts REST interface about keys.
 #
-# Note that the list returns only 10 keys per query.  As such, we are going to
+# Note that the list returns only 500 keys per query.  As such, we are going to
 # define a batch limit and make multiple queries to the CipherTrust Server
 # -----------------------------------------------------------------------------
 
@@ -518,10 +518,12 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
     t_batchObjSkip          = t_batchLimit * t_batchSkip
     t_dstObjCnt             = 0
 
+    # Define a common header for all REST API Requests
     t_dstHeaders            = {"Content-Type":APP_JSON, "Accept":APP_JSON, "Authorization": t_dstAuthStr}
 
     # Process all keys per the size of the t_batchLimit until you have retrieved all of them.
-
+    # Although this is the initial batch, use the same command structure as if multiple batch calls
+    # may be required - for consistency.
     t_dstRESTKeyList        = "%svault/keys2/?skip=%s&limit=%s" %(DST_REST_PREAMBLE, t_batchObjSkip, t_batchLimit)
     t_dstHostRESTCmd        = "https://%s:%s%s" %(t_dstHost, t_dstPort, t_dstRESTKeyList)   
 
@@ -529,7 +531,7 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
     r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
 
     if(r.status_code != STATUS_CODE_OK):
-        tmpStr = "getDstObjList: t_batchLimit:%s t_batchSkip:%s t_batchObSkip:%s t_dskObjCnt:%s" %(t_batchLimit, t_batchSkip, t_batchObjSkip, t_dstObjCnt)
+        tmpStr = "getDstObjList: t_batchLimit:%s t_batchSkip:%s t_batchObSkip:%s" %(t_batchLimit, t_batchSkip, t_batchObjSkip)
         kPrintError(tmpStr, r)
         exit()
 
@@ -550,12 +552,16 @@ def getDstObjList(t_dstHost, t_dstPort, t_dstAuthStr):
         r = requests.get(t_dstHostRESTCmd, headers=t_dstHeaders, verify=False)
 
         if(r.status_code != STATUS_CODE_OK):
-            tmpStr = "getDstObjList: t_batchLimit:%s t_batchSkip:%s t_batchObSkip:%s t_dskObjCnt:%s" %(t_batchLimit, t_batchSkip, t_batchObjSkip, t_dstObjCnt)
+            tmpStr = "getDstObjList: t_dstObjTotalCnt:%s t_batchLimit:%s t_batchSkip:%s t_batchObjSkip:%s t_dstObjCnt:%s" %(t_dstObjTotalCnt, t_batchLimit, t_batchSkip, t_batchObjSkip, t_dstObjCnt)
             kPrintError(tmpStr, r)
             exit()
 
+        # Retreive the batch of objects
         t_dstObjList       = r.json()[CMAttributeType.RESOURCES.value]
-        t_dstFinalObjList.append(t_dstObjList)
+
+        # Add/extend the current batch to the total list (Final Obj List)
+        t_dstFinalObjList.extend(t_dstObjList)
+        t_dstObjCnt = len(t_dstFinalObjList)
 
     # print("\n         Dst Objects: ",  t_dstFinalObjList[0].keys())
     return t_dstFinalObjList
