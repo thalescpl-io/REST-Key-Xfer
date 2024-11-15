@@ -4,7 +4,7 @@
 # with the source and destination servers
 #
 ######################################################################
-from secrets import token_bytes
+from    secrets import token_bytes
 import  requests
 from    urllib3.exceptions import InsecureRequestWarning
 import  json
@@ -46,7 +46,7 @@ def printJList(t_str, t_jList):
 
 def listToDict(t_list):
 # -------------------------------------------------------------------------------
-# Simple routine to take a string of word followed by values and turn them
+# Simple routine to take a string of words followed by values and turn them
 # into a dictionary of string values.  Note that we need to clean up
 # leading and trailing spaces
 # -------------------------------------------------------------------------------
@@ -61,34 +61,54 @@ def listToDict(t_list):
 
     return t_dict
 
+def returnBracketValue(t_stringWithBrackets):
+# -------------------------------------------------------------------------------
+# Simple routine that takes a string of "[[Idx 0] [Type Text] [Value 12345]]"
+# and returns just the value (12345)
+# -------------------------------------------------------------------------------
+    t_VALUE      = "VALUE "
+    t_valueLen   = len(t_VALUE)
+
+    t_nameStr = t_stringWithBrackets.strip()    # cleanup - remove leading and trailing spaces
+
+    # Find the string that follows the VALUE delimitor
+    t_begin             = t_nameStr.find(t_VALUE) + t_valueLen              # find string that comes after 'VALUE'
+    t_end               = t_nameStr.find("]", t_begin)                      # end of VALUE string
+    t_subStrValue       = t_nameStr[t_begin:t_end].strip()    
+
+    return t_subStrValue
 
 def bracketsToDict(t_stringWithBrackets):
 # -------------------------------------------------------------------------------
-# Simple routing that changes a string of "[[Idx 0] [Type Text] [Value 12345]]"
-# to a dictionary of {"Idx": "0", "Type":"Text", "Value":"12345"}
-# into a dictionary of string values.  Note that we need to clean up
-# leading and trailing spaces
+# Simple routine extracts name and value information from a string of 
+# "[[NAME key] [INDEX 0] [TYPE Text] [VALUE 12345] ...]" to a dictionary 
+# of {"key": "12345", ...} 
 # -------------------------------------------------------------------------------
-    t_dict  = {}     # create now to return later
+    t_dict      = {}     # create now to return later
+    t_NAME      = "NAME "
+    t_nameLen   = len(t_NAME)
+    t_VALUE     = "VALUE "
+    t_valueLen  = len(t_NAME)
 
     t_nameStr = t_stringWithBrackets.strip()    # cleanup - remove leading and trailing spaces
-    t_nameStr = t_nameStr.replace(',','')         # cleanup - remove commas
-    t_nameStr = t_nameStr.replace('[[', '[')    # remove leading bracket for string
-    t_nameStr = t_nameStr.replace(']]', "]")    # remove trailing brackeet for string
 
     # Create a substring and eat through it, separating the bracketed data (e.g. [KEY1 VALUE1] [KEY2 VALUE2] ...)
-    # Start loop and continue until leading brackets are gone.
+    # Start loop and continue until NAME keyword is no longer present in the string.
 
-    while "[" in t_nameStr:
-        t_beginBracketPos   = t_nameStr.find("[")
-        t_endBracketPos     = t_nameStr.find("]")
-        t_subStr            = t_nameStr[t_beginBracketPos+1:t_endBracketPos]    # exclude brackets
-        t_split             = t_subStr.split()                                  # break into two pieces
-        t_key               = t_split[0]
-        t_value             = t_split[1]
-        t_dict[t_key]       = t_value
+    while t_NAME in t_nameStr: 
+        # Find the string that follows the NAME delimitor
+        t_begin             = t_nameStr.find(t_NAME) + t_nameLen                # find string that comes after 'NAME'
+        t_end               = t_nameStr.find("]", t_begin)                      # end of NAME string
+        t_subStrName        = t_nameStr[t_begin:t_end].strip()
+        t_nameStr           = t_nameStr[t_end:]                                 # move beginning of string
 
-        t_nameStr = t_nameStr[t_endBracketPos+1:]  # discard substring by moving beginning of string forward
+        # Find the string that follows the VALUE delimitor
+        t_begin             = t_nameStr.find(t_VALUE) + t_valueLen              # find string that comes after 'VALUE'
+        t_end               = t_nameStr.find("]", t_begin)                      # end of VALUE string
+        t_subStrValue       = t_nameStr[t_begin:t_end].strip()
+        t_nameStr           = t_nameStr[t_end:]                                 # move beginning of string
+
+        t_dict[t_subStrName]       = t_subStrValue
 
     return t_dict
 
@@ -444,16 +464,14 @@ def printSrcSecretObjDataList(t_srcSecretObjDataList):
         
         # The NameString is a little funky.  It comes with other stuff.  You want the "VALUE" key of the name string.
         t_nameStr       = str(t_srcSecretObjDataList[obj][GKLMAttributeType.NAME.value])
-        t_nameDict      = bracketsToDict(t_nameStr)
-        t_alias         = str(t_nameDict[GKLMAttributeType.NAME_VALUE.value])
-
+        t_alias         = returnBracketValue(t_nameStr)
         t_uuid          = str(t_srcSecretObjDataList[obj][GKLMAttributeType.UUID.value])
         t_type          = str(t_srcSecretObjDataList[obj][GKLMAttributeType.TYPE.value])
 
         # Similar to the Name String, the Hash String comes with other stuff.  You want the "VALUE" key of the name string
         t_digest        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.DIGEST.value])
-        t_digestDict    = bracketsToDict(t_digest)
-        t_hv            = re.sub(t_chars, '', str(t_digestDict[GKLMAttributeType.NAME_VALUE.value])) # strip out unwanted chars
+        t_digestStr     = returnBracketValue(t_digest)
+        t_hv            = re.sub(t_chars, '', t_digestStr) # strip out unwanted chars
 
         t_client        = str(t_srcSecretObjDataList[obj][GKLMAttributeType.CLIENT_NAME.value])
 
@@ -607,6 +625,7 @@ def exportDstObjData(t_dstHost, t_dstPort, t_dstObjList, t_dstAuthStr):
         t_dstObjData.append(t_data)  #Add data to te list
         
         # tmpStr ="Dst Obj: %s Name: %s " %(obj, dstObjName)
+        tmpStr ="Dst Obj: %s Name: %s data: %s" %(obj, dstObjName, t_data)
         # print(tmpStr)
         
         t_ObjCnt += 1
@@ -1012,3 +1031,23 @@ def removeSrcClientUsers(t_srcHost, t_srcPort, t_srcAuthStr, t_client, t_userLis
         exit()
 
     return t_success
+
+def checkForSrcCustomAttributes(t_srcKeyObjDataList):
+# -----------------------------------------------------------------------------
+# Some KMIP clients (i.e. NetApp) will store custom attributes in the KMIP
+# server.  However, each KMIP server stores that information differently.
+# This code checks for the existance of custom attributes in SKLM by looking
+# to see if "Custom Attributes" key is present, and if it contains NetApp-
+# specific elements.
+# -----------------------------------------------------------------------------
+
+    t_srcCustomAttributesIsPresent      = False
+    t_srcNetAppAttributesArePresent     = False
+
+    if GKLMAttributeType.CUSTOM_ATTRIBUTES.value in t_srcKeyObjDataList:
+        if len(t_srcKeyObjDataList[GKLMAttributeType.CUSTOM_ATTRIBUTES.value]) > 0:
+            t_srcCustomAttributesIsPresent    = True
+            if NetAppCustomAttribute.NETAPPHEADER.value in t_srcKeyObjDataList[GKLMAttributeType.CUSTOM_ATTRIBUTES.value]:
+                t_srcNetAppAttributesArePresent = True
+
+    return t_srcCustomAttributesIsPresent, t_srcNetAppAttributesArePresent

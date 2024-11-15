@@ -12,8 +12,8 @@ import  argparse
 import  binascii
 import  codecs
 import  hashlib
-from pickle import TRUE
-from tkinter.tix import TCL_ALL_EVENTS
+from    pickle import TRUE
+# from    tkinter.tix import TCL_ALL_EVENTS
 from    kerrors import *
 from    krestcmds import *
 from    krestenums import *
@@ -158,17 +158,17 @@ srcNetAppFilterDict = {}
 if args.srcNANodeID is not None:
     srcNetAppNodeID = str(" ".join(args.srcNANodeID))
     print(" NetApp NodeID:", srcNetAppNodeID)
-    srcNetAppFilterDict[NetAppAttribute.NODEID.value] = srcNetAppNodeID
+    srcNetAppFilterDict[NetAppCustomAttribute.NODEID.value] = srcNetAppNodeID
     
 if args.srcNAClusterName is not None:
     srcNetAppClusterName = str(" ".join(args.srcNAClusterName))
     print(" NetApp ClusterName:", srcNetAppClusterName)
-    srcNetAppFilterDict[NetAppAttribute.CLUSTERNAME.value] = srcNetAppClusterName
+    srcNetAppFilterDict[NetAppCustomAttribute.CLUSTERNAME.value] = srcNetAppClusterName
 
 if args.srcNAVserverID is not None:
     srcNetAppVserverID = str(" ".join(args.srcNAVserverID))
     print(" NetApp VServer ID:", srcNetAppVserverID)
-    srcNetAppFilterDict[NetAppAttribute.VSERVERID.value] = srcNetAppVserverID
+    srcNetAppFilterDict[NetAppCustomAttribute.VSERVERID.value] = srcNetAppVserverID
     
 # DEBUG - this is a custom attribute that appears occastionally for non-NetApp objects
 # srcNetAppFilterDict['y-RNGSimulation'] = 'Qg'
@@ -227,7 +227,6 @@ if listOnly != listOnlyOption.DESTINATION.value:
     srcSecretObjDataList = []
     srcSecretListCnt    = 0
 
-
     # If user wants a list of available clients, provide it.
     if listSrcClients:  
         tmpStr = "    Available Source Clients (%s): " %(listLen)
@@ -250,14 +249,13 @@ if listOnly != listOnlyOption.DESTINATION.value:
             # in the object string looks like "Symmetric Key (128) Secret Data (4)" where the number within the parenthasis is the quantity of 
             # symmetric keys or secret objects.
 
-            t_objStr = t_objStr.strip() # remove leading and trailing white space
+            t_objStr = t_objStr.strip()                            # remove leading and trailing white space
             t_objStr = t_objStr.replace(' (', ', (') # Replace spaces before parenthasis with commas for easier parsing
             t_objStr = t_objStr.replace(') ', '), ') # Replace spaces before parenthasis with commas for easier parsing
             t_objStr = t_objStr.replace(' (', '') # Remove leading parenthasis
             t_objStr = t_objStr.replace(')', '') # Remove trailing parenthasis
 
             t_objStrList = t_objStr.split(',') # create a list of the elements in the string.  Note elements are separated by a comma
-
             t_objStrDict = listToDict(t_objStrList)
 
             # Process SYMMETRIC KEY objects
@@ -372,11 +370,11 @@ if listOnly != listOnlyOption.DESTINATION.value:
     # If the length of the NetApp filter (dictionary) is greater than zero, apply NetApp filter.
     if len(srcNetAppFilterDict) > 0:
         # filter key objects against NetAP dictionary
-        t_srcFilteredList = filterNetAppObjDataList(srcKeyObjDataList, srcNetAppFilterDict)
+        t_srcFilteredList = filterSrcNetAppObjDataList(srcKeyObjDataList, srcNetAppFilterDict)
         srcKeyObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
         # filter secret objects against NetAPP dictionary
-        t_srcFilteredList = filterNetAppObjDataList(srcSecretObjDataList, srcNetAppFilterDict)
+        t_srcFilteredList = filterSrcNetAppObjDataList(srcSecretObjDataList, srcNetAppFilterDict)
         srcSecretObjDataList = t_srcFilteredList   # replace key obj data list with filtered list
 
     # After iterating through all of the clients in the source, report the total of all key and secret material in the list
@@ -395,8 +393,9 @@ if listOnly != listOnlyOption.DESTINATION.value:
 
         print("\n --- SRC OBJECT RETRIEVAL COMPLETE --- \n")
 
+
 # ################################################################################
-# Get Destiation Information and Material
+# Get Destination Information and Material
 # ################################################################################
 if listOnly != listOnlyOption.SOURCE.value:
     dstAuthStr      = createDstAuthStr(dstHost, dstPort, dstUser, dstPass)
@@ -436,7 +435,7 @@ if listOnly == listOnlyOption.NEITHER.value:
     xSecretObj     = {}
     xSecretObjList = []
 
-    # -------------- KEY OBJECT MAPPING ------------------------------------------------------------- 
+     # -------------- KEY OBJECT MAPPING ------------------------------------------------------------- 
     # For each KEY object in the source, map it with the proper dictionary keys to a x-formed list of 
     # dictionaries for later upload to the destination
     # -----------------------------------------------------------------------------------------------
@@ -451,13 +450,12 @@ if listOnly == listOnlyOption.NEITHER.value:
             if srcUMClean == tmpUM.name:
                 xKeyObj[CMAttributeType.USAGE_MASK.value]   = tmpUM.value
 
-        # The GKLM Alias seems to match the patter of the CM Name key.  
+        # The GKLM Alias seems to match the pattern of the CM Name key.  
         # However, GKLM includes brakcets ("[]") in the string
         # and they need to be removed before copying the true alias value to CM
         tmpStr = srcKeyObjDataList[k][GKLMAttributeType.ALIAS.value]
         xKeyObj[CMAttributeType.NAME.value]         = tmpStr.strip("[]")
 
-        # xKeyObj[CMAttributeType.STATE.value]        = srcKeyObjDataList[k][GKLMAttributeType.KEY_STATE.value]
         xKeyObj[CMAttributeType.ALGORITHM.value]    = srcKeyObjDataList[k][GKLMAttributeType.KEY_ALGORITHM.value]
         xKeyObj[CMAttributeType.SIZE.value]         = int(srcKeyObjDataList[k][GKLMAttributeType.KEY_LENGTH.value])
 
@@ -474,8 +472,35 @@ if listOnly == listOnlyOption.NEITHER.value:
         # when uploaded to CM
         xKeyObj[CMAttributeType.META.value]= {CMAttributeType.OWNER_ID.value: CM_userID}
 
+        # Check for Custom Attributes and if they exist, add them as Meta data to destination
+        srcCustomAttributesIsPresent, srcNetAppAttributesArePresent = checkForSrcCustomAttributes(srcKeyObjDataList[k])
+        if srcNetAppAttributesArePresent:
+            custSrcAttribDict = bracketsToDict(srcKeyObjDataList[k][GKLMAttributeType.CUSTOM_ATTRIBUTES.value])
+
+            # Now trim out all non-NetApp keys and update custSrCAttribDict.
+            tmpDict = {}
+            for t_key in custSrcAttribDict.keys():
+                if NetAppCustomAttribute.NETAPPHEADER.value in t_key:
+                    tmpDict[t_key] = custSrcAttribDict[t_key]
+            custSrcAttribDict = tmpDict.copy()
+
+            # Finally, place it in the CipherTrust format and copy it over.
+            custAttribList = []
+            for t_key in custSrcAttribDict:
+                tmpDict.clear()
+                tmpDict[NetAppMetaAttribute.TYPE.value] = NetAppMetaAttribute.TYPE_VALUE.value
+                tmpDict[NetAppMetaAttribute.INDEX.value] = 0
+                tmpDict[t_key] = custSrcAttribDict[t_key]
+
+                # add each attribute dictionary to the overall list of attributes
+                custAttribList.append(tmpDict.copy()) 
+
+            # Add the custom attribute list to the destination key object
+            xKeyObj[CMAttributeType.META.value][NetAppMetaAttribute.KMIP.value]= {NetAppMetaAttribute.CUSTOM.value: custAttribList}
+
         # After assembling the key object, append it to the list of other key objects
         xKeyObjList.append(xKeyObj.copy())
+
         # print("\n Key Obj: ", json.dumps(xKeyObj, skipkeys = True, allow_nan = True, indent = 3))
 
 
@@ -485,8 +510,6 @@ if listOnly == listOnlyOption.NEITHER.value:
     # -----------------------------------------------------------------------------------------------
     if includeSecrets: 
         for k in range(srcSecretObjCnt):
-            # xSecretObj[CMAttributeType.UUID.value]         = srcSecretObjDataList[k][GKLMAttributeType.UUID.value]
-
             # GKLM stores the Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
             # The GKLM Usage Mask string must be replaced with the appropriate value before storing it in CM.
             srcUM       = srcSecretObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value]
@@ -500,13 +523,11 @@ if listOnly == listOnlyOption.NEITHER.value:
             # GKLM does not use alias for Secrets.  So we are copying the Name into the CM Alias.  
             # However, GKLM includes brakcets ("[]") in the string and they need to be removed 
             # before copying the true name value to CM
-
-            t_nameStrDict   = bracketsToDict(srcSecretObjDataList[k][GKLMAttributeType.NAME.value])
-            t_name          = t_nameStrDict[GKLMAttributeType.NAME_VALUE.value]
+            t_name  = returnBracketValue(srcSecretObjDataList[k][GKLMAttributeType.NAME.value])
             xSecretObj[CMAttributeType.NAME.value] = t_name
 
             # Copy name into Alias component of dst object
-            t_aliasList = [{CMAliasesAttribute.ALIAS.value:t_nameStrDict[GKLMAttributeType.NAME_VALUE.value], CMAliasesAttribute.TYPE.value:"string", CMAliasesAttribute.INDEX.value:0}]
+            t_aliasList = [{CMAliasesAttribute.ALIAS.value:t_name, CMAliasesAttribute.TYPE.value:"string", CMAliasesAttribute.INDEX.value:0}]
             xSecretObj[CMAttributeType.ALIASES.value] = t_aliasList
 
             xSecretObj[CMAttributeType.STATE.value]         = srcSecretObjDataList[k][GKLMAttributeType.SECRET_STATE.value].replace("_","-").title()
@@ -526,6 +547,32 @@ if listOnly == listOnlyOption.NEITHER.value:
             # Add a userID to the associated Secret object so it can be made owner of the Secret
             # when uploaded to CM
             xSecretObj[CMAttributeType.META.value]= {CMAttributeType.OWNER_ID.value: CM_userID}
+
+            # Check for Custom Attributes and if they exist, add them as Meta data to destination
+            srcCustomAttributesIsPresent, srcNetAppAttributesArePresent = checkForSrcCustomAttributes(srcSecretObjDataList[k])
+            if srcNetAppAttributesArePresent:
+                custSrcAttribDict = bracketsToDict(srcSecretObjDataList[k][GKLMAttributeType.CUSTOM_ATTRIBUTES.value])
+
+                # Now trim out all non-NetApp keys and update custSrcAttribDict.
+                tmpDict = {}
+                for t_key in custSrcAttribDict.keys():
+                    if NetAppCustomAttribute.NETAPPHEADER.value in t_key:
+                        tmpDict[t_key] = custSrcAttribDict[t_key]
+                custSrcAttribDict = tmpDict.copy()
+
+                # Finally, place it in the CipherTrust format and copy it over.
+                custAttribList = []
+                for t_key in custSrcAttribDict:
+                    tmpDict.clear()
+                    tmpDict[NetAppMetaAttribute.TYPE.value] = NetAppMetaAttribute.TYPE_VALUE.value
+                    tmpDict[NetAppMetaAttribute.INDEX.value] = 0
+                    tmpDict[t_key] = custSrcAttribDict[t_key]
+
+                    # add each attribute dictionary to the overall list of attributes
+                    custAttribList.append(tmpDict.copy()) 
+
+                # Add the custom attribute list to the destination secret object
+                xSecretObj[CMAttributeType.META.value][NetAppMetaAttribute.KMIP.value]= {NetAppMetaAttribute.CUSTOM.value: custAttribList}
 
             # After assembling the Secret object, append it to the list of other Secret objects
             xSecretObjList.append(xSecretObj.copy())
@@ -588,15 +635,19 @@ if listOnly != listOnlyOption.SOURCE.value:
     dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
     print("\nDst Object List Count: ", len(dstObjList))
 
+    # Now that name information has been collected, export the data for each key
+    # THIS INCLUDES the META Data and the Key Material
+    dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
+
     # Filter and show NetApp specific information.
     if len(srcNetAppFilterDict) > 0:
-        t_FilteredList = filterNetAppObjDataList(dstObjList, srcNetAppFilterDict)
+        t_FilteredList = filterDstNetAppObjDataList(dstObjData, srcNetAppFilterDict)
         dstObjList = t_FilteredList   # replace key obj data list with filtered list
         
-    dstObjData      = exportDstObjData(dstHost, dstPort, dstObjList, dstAuthStr)
-    dstExpObjCnt    = len(dstObjData)
+    dstExpObjCnt    = len(dstObjList)
     print("Dst Exportable Data Object Count: ", dstExpObjCnt)
-    printDstObjDataAndOwner(dstObjData, dstUsrsAllDict)
+    # printDstObjDataAndOwner(dstObjData, dstUsrsAllDict)
+    printDstObjDataAndOwner(dstObjList, dstUsrsAllDict)
     
     print("\n --- DST OBJECT RETRIEVAL COMPLETE --- \n")
     

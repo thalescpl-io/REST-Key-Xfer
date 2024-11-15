@@ -9,6 +9,7 @@ from    urllib3.exceptions import InsecureRequestWarning
 import  json
 from    kerrors import *
 from    krestenums import *
+from    krestcmds import *
 
 import  enum
 import  re
@@ -69,20 +70,20 @@ def createNameValueDict(t_str):
     return t_nvPairDict
         
     
-def filterNetAppObjDataList(t_ObjDataList, t_netAppFilterDict):
+def filterSrcNetAppObjDataList(t_srcObjDataList, t_netAppFilterDict):
 # -----------------------------------------------------------------------------
 # Filters ObjDataList by the NetApp filter definitions described by user.
 #
-# Using the neAppFilterDict Dictionary, filter the srcObjDataList such that 
+# Using the netAppFilterDict Dictionary, filter the srcObjDataList such that 
 # only those keys satisfy all of the defined filters are returned.
 # -----------------------------------------------------------------------------
     
-    t_ListLen           = len(t_ObjDataList)
+    t_ListLen           = len(t_srcObjDataList)
     t_filteredList      = [] # created list to be returned later
     
     # -------------------------------------------------------------------------
-    # For each object in the Object Data List, you will need to check for the
-    # presence of a 'Custom Attributes' field.  If that field exists, you will
+    # For each object in the Source Object Data List, you will need to check for
+    # the presence of a 'Custom Attributes' field.  If that field exists, you will
     # need to check for each of the attribute fields included in the
     # t_netAppFilterDict dictionary.  For each of thoses fields, you will need
     # to check the corresponding value.  If ALL of the values in the for each 
@@ -93,11 +94,11 @@ def filterNetAppObjDataList(t_ObjDataList, t_netAppFilterDict):
     for obj in range(t_ListLen):
         
         # Check for the presence of the 'Custom Attributes' field    
-        if GKLMAttributeType.CUSTOM_ATTRIBUTES.value in t_ObjDataList[obj]: 
+        if GKLMAttributeType.CUSTOM_ATTRIBUTES.value in t_srcObjDataList[obj]: 
             
             # Since the Custom Attributes field is present, proceed with retrieving the list of
             # custom attributes.
-            t_CustAttribStr = t_ObjDataList[obj][GKLMAttributeType.CUSTOM_ATTRIBUTES.value]
+            t_CustAttribStr = t_srcObjDataList[obj][GKLMAttributeType.CUSTOM_ATTRIBUTES.value]
             
             # Note.  This is ugly.  The NetApp Custom Attributes are a single list of strings with brackets...
             # I.e. "Custom Attributes": "[[NAME x-NETAPP-KeyId] [[INDEX 0] [TYPE JAVA_STRING] 
@@ -124,7 +125,7 @@ def filterNetAppObjDataList(t_ObjDataList, t_netAppFilterDict):
                 if netAppAttrib in t_objNameValueDict:
                     t_objDictAttribValue = t_objNameValueDict[netAppAttrib]
                     if netAppAttribVal in t_objDictAttribValue:
-                        addObjToFilteredList = addObjToFilteredList and True # Is this correct logic?  Should it be a bitwise AND (&)?
+                        addObjToFilteredList = addObjToFilteredList & True 
                     else:
                         addObjToFilteredList = False    # exclude object from filtered list since value is not found
                 else:
@@ -132,6 +133,89 @@ def filterNetAppObjDataList(t_ObjDataList, t_netAppFilterDict):
                     
             # If all NetApp Attributes are found in the Custom Attributes field of the object, then save the Obj
             if addObjToFilteredList == True:
-                t_filteredList.append(t_ObjDataList[obj])
+                t_filteredList.append(t_srcObjDataList[obj])
                 
+    return t_filteredList
+
+
+def filterDstNetAppObjDataList(t_dstObjDataList, t_netAppFilterDict):
+# -----------------------------------------------------------------------------
+# Filters ObjDataList by the NetApp filter definitions described by user.
+#
+# Using the netAppFilterDict Dictionary, filter the dstObjDataList such that 
+# only those keys satisfy all of the defined filters are returned.
+#
+# Filtering the destination list is much easier that the source list because
+# it is better organized.
+# -----------------------------------------------------------------------------
+    
+    t_ListLen           = len(t_dstObjDataList)
+    t_filteredList      = [] # create list to be returned later
+    t_objectDict        = {} # create working dictionary
+
+    # -------------------------------------------------------------------------
+    # For each object in the Dst Object Data List, you will need to check for the
+    # presence of a {"meta":{"kmip":{"custom":[]}] meta structure.  If that
+    # structure exists, then each element in that list ([]), with have a three
+    # dictionary with the following keys: type, index, and x-NETAPP-??? where the
+    # x-NETAPP-??? will be a key name associated with each NetApp-specific parameter.
+    # You need to check for each of the attribute fields included in the
+    # t_netAppFilterDict dictionary.  For each of thoses fields, you will need
+    # to check the corresponding value.  If ALL of the values in the for each 
+    # of the dictionary keys exist (partially or entirely), then the 
+    # corresponding object is included in the returned list (t_filteredList)
+    # --------------------------------------------------------------------------
+    
+    for obj in range(t_ListLen):
+        t_customAttribList  = []
+        tmpdict = {}
+
+        # Check for the presence of the meta key
+        t_objectDict = t_dstObjDataList[obj]
+
+        # Check for the presence of the a {"meta":{"kmip":{"custom":[]}] structure. If present, extract the custom list.
+        if CMAttributeType.META.value in t_objectDict.keys(): 
+            if t_objectDict[CMAttributeType.META.value]:
+                if NetAppMetaAttribute.KMIP.value in t_objectDict[CMAttributeType.META.value].keys():
+                    if NetAppMetaAttribute.CUSTOM.value in t_objectDict[CMAttributeType.META.value][NetAppMetaAttribute.KMIP.value].keys():
+                        t_customAttribList = t_objectDict[CMAttributeType.META.value][NetAppMetaAttribute.KMIP.value][NetAppMetaAttribute.CUSTOM.value]
+
+            # Before checking for the presence of each of the dictionary attributes/keys, assume they are
+            # present in the list until one is NOT discovered.
+            addObjToFilteredList = True # default
+                    
+            for netAppAttrib in t_netAppFilterDict.keys():
+                netAppAttribVal = t_netAppFilterDict.get(netAppAttrib)
+
+                # Now check to see if the netAppAttribute is in the list of custom attributes.
+                # If the attribute is present, check for the presence of the value .  
+                # If both the attribute is present and the value contains the filtered characters, then add
+                # object to filtered list.                
+                t_attribFound           = False     # reset for each attribute
+                t_valueFound            = False
+                addObjToFilteredList    = False
+
+                for t_attrib in t_customAttribList:
+                    if netAppAttrib in t_attrib.keys():
+                        # print("netAppAttrib Found:", netAppAttrib)
+                        t_attribFound = t_attribFound | True
+                        if netAppAttribVal in t_attrib[netAppAttrib]:  #check to see if the value is there
+                            t_valueFound = t_valueFound | True
+                            # print("netAppAttribValue Found:", netAppAttribVal)
+                
+                # If the attribute and value were found in the object's custome attribute list, then allow that
+                # object to be added to the filterned objects list.
+                if t_attribFound and t_valueFound:
+                    addObjToFilteredList = True
+
+                # print("Obj netAppAttrib and netAppValue addOBJToFilterd:", obj, netAppAttrib, netAppAttribVal, addObjToFilteredList)
+                # if addObjToFilteredList:
+                #    print("t_customAttribList:", t_customAttribList)
+                  
+            # If ALL NetApp Attributes are found in the Custom Attributes field of the object, then save the Obj
+            if addObjToFilteredList == True:
+                t_filteredList.append(t_dstObjDataList[obj])
+
+    # printJList("filterDstNetAppObjDataList: ", t_filteredList)
+
     return t_filteredList

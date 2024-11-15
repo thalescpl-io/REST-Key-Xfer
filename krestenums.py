@@ -194,11 +194,34 @@ class listOnlyOption(enum.Enum):
     DESTINATION                 = 'DESTINATION'
     BOTH                        = 'BOTH'
     
-class NetAppAttribute(enum.Enum):
+class NetAppCustomAttribute(enum.Enum):
+    NETAPPHEADER                = 'x-NETAPP'
     NODEID                      = 'x-NETAPP-NodeId'
+    NODENAME                    = 'x-NETAPP-NodeName'
     CLUSTERNAME                 = 'x-NETAPP-ClusterName'
+    CLUSTERID                   = 'x-NETAPP-ClusterId'
     VSERVERID                   = 'x-NETAPP-VserverId'
-    
+    VSERVERUUID                 = 'x-NETAPP-VserverUuid'
+    TAG                         = 'x-NETAPP-Tag'
+    PARTNERCLUSTERID            = 'x-NETAPP-PartnerClusterId'
+    PARTNERCLUSTERNAME          = 'x-NETAPP-PartnerClusterName'
+    PARTNERNODEID               = 'x-NETAPP-PartnerNodeID'
+    PARTNERNODENAME             = 'x-NETAPP-PartnerNodeName'
+    PRODUCT                     = 'x-NETAPP-Product'
+    VERSION                     = 'x-NETAPP-Version'
+    KEYID                       = 'x-NETAPP-KeyId'
+    KEYUSAGE                    = 'x-NETAPP-KeyUsage'
+    KEYTYPE                     = 'x-NETAPP-KeyType'
+    VOLUMEID                    = 'x-NETAPP-VolumeId'
+    VOLUMEIDHASH                = 'x-NETAPP-VolumeIdHash'
+
+class NetAppMetaAttribute(enum.Enum):
+    KMIP                        = 'kmip'
+    CUSTOM                      = 'custom'
+    TYPE                        = 'type'
+    INDEX                       = 'index'
+    TYPE_VALUE                  = 'TextString'
+
 class CMMetaAttribute(enum.Enum):    
     OWNER_ID                    = 'ownerId'
     GROUP_PERMISSIONS           = 'permissions'
@@ -214,9 +237,9 @@ class CMMetaGroupPermissions(enum.Enum):
     SIGN_VERIFY                 = 'SignVerifyWithKey'
 
 class CMSecretDataType(enum.Enum):
-    BLOB                = "blob"
-    PASSWORD            = "password"
-    SEED                = "seed"
+    BLOB                        = "blob"
+    PASSWORD                    = "password"
+    SEED                        = "seed"
     
 class CMUserGroup:
     def __init__(self, name, member, description=None):
