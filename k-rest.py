@@ -239,7 +239,6 @@ if listOnly != listOnlyOption.DESTINATION.value:
         t_secretCount = 0
 
         t_mgdObjCnt = clientList[client][GKLMAttributeType.MANAGED_OBJECT_COUNT.value]
-        
         t_objStr = clientList[client][GKLMAttributeType.OBJECT.value]        
         
         # Now check for the presents of any objects for the client
@@ -249,11 +248,11 @@ if listOnly != listOnlyOption.DESTINATION.value:
             # in the object string looks like "Symmetric Key (128) Secret Data (4)" where the number within the parenthasis is the quantity of 
             # symmetric keys or secret objects.
 
-            t_objStr = t_objStr.strip()                            # remove leading and trailing white space
-            t_objStr = t_objStr.replace(' (', ', (') # Replace spaces before parenthasis with commas for easier parsing
-            t_objStr = t_objStr.replace(') ', '), ') # Replace spaces before parenthasis with commas for easier parsing
-            t_objStr = t_objStr.replace(' (', '') # Remove leading parenthasis
-            t_objStr = t_objStr.replace(')', '') # Remove trailing parenthasis
+            t_objStr = t_objStr.strip()                 # remove leading and trailing white space
+            t_objStr = t_objStr.replace(' (', ', (')    # Replace spaces before parenthasis with commas for easier parsing
+            t_objStr = t_objStr.replace(') ', '), ')    # Replace spaces before parenthasis with commas for easier parsing
+            t_objStr = t_objStr.replace(' (', '')       # Remove leading parenthasis
+            t_objStr = t_objStr.replace(')', '')        # Remove trailing parenthasis
 
             t_objStrList = t_objStr.split(',') # create a list of the elements in the string.  Note elements are separated by a comma
             t_objStrDict = listToDict(t_objStrList)
@@ -431,24 +430,16 @@ if listOnly == listOnlyOption.NEITHER.value:
     xKeyObj     = {}
     xKeyObjList = []
 
-    #  Create Secret object dictionary and list to map GKLM keys and values to CM
-    xSecretObj     = {}
-    xSecretObjList = []
-
-     # -------------- KEY OBJECT MAPPING ------------------------------------------------------------- 
+    # Create a dictionary of Key Usage (it will make it simpler to map)
+    keyUsageDict =  {}
+    for tmpUM in CryptographicUsageMask: 
+        keyUsageDict[tmpUM.name] = tmpUM.value
+    
+    # -------------- KEY OBJECT MAPPING ------------------------------------------------------------- 
     # For each KEY object in the source, map it with the proper dictionary keys to a x-formed list of 
     # dictionaries for later upload to the destination
     # -----------------------------------------------------------------------------------------------
     for k in range(srcKeyObjCnt):
-        # xKeyObj[CMAttributeType.UUID.value]         = srcKeyObjDataList[k][GKLMAttributeType.UUID.value]
-
-        # GKLM stores the Key Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
-        # The GKLM Key Usage Mask string must be replaced with the appropriate value before storing it in CM.
-        srcUM       = srcKeyObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value]
-        srcUMClean  = "".join(srcUM.split())    #trim leading and trailing spaces from srcUM string
-        for tmpUM in CryptographicUsageMask:        
-            if srcUMClean == tmpUM.name:
-                xKeyObj[CMAttributeType.USAGE_MASK.value]   = tmpUM.value
 
         # The GKLM Alias seems to match the pattern of the CM Name key.  
         # However, GKLM includes brakcets ("[]") in the string
@@ -456,6 +447,8 @@ if listOnly == listOnlyOption.NEITHER.value:
         tmpStr = srcKeyObjDataList[k][GKLMAttributeType.ALIAS.value]
         xKeyObj[CMAttributeType.NAME.value]         = tmpStr.strip("[]")
 
+        # Map the string format of key usage to a binary format (used by CM)
+        xKeyObj[CMAttributeType.USAGE_MASK.value]   = mapKeyUsage(srcKeyObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value], keyUsageDict)
         xKeyObj[CMAttributeType.ALGORITHM.value]    = srcKeyObjDataList[k][GKLMAttributeType.KEY_ALGORITHM.value]
         xKeyObj[CMAttributeType.SIZE.value]         = int(srcKeyObjDataList[k][GKLMAttributeType.KEY_LENGTH.value])
 
@@ -466,6 +459,7 @@ if listOnly == listOnlyOption.NEITHER.value:
         
         xKeyObj[CMAttributeType.OBJECT_TYPE.value]  = tmpStr2.title()   # SYMMETRIC KEY -> Symmetric Key
         xKeyObj[CMAttributeType.MATERIAL.value]     = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
+        xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
         xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
         
         # Add a userID to the associated key object so it can be made owner of the key
@@ -509,17 +503,11 @@ if listOnly == listOnlyOption.NEITHER.value:
     # dictionaries for later upload to the destination
     # -----------------------------------------------------------------------------------------------
     if includeSecrets: 
+        #  Create Secret object dictionary and list to map GKLM keys and values to CM
+        xSecretObj     = {}
+        xSecretObjList = []
+
         for k in range(srcSecretObjCnt):
-            # GKLM stores the Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
-            # The GKLM Usage Mask string must be replaced with the appropriate value before storing it in CM.
-            srcUM       = srcSecretObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value]
-            xSecretObj[CMAttributeType.USAGE_MASK.value]   = CryptographicUsageMask.NULL.value # initiate UM to null
-
-            for tmpUM in CryptographicUsageMask:
-                if tmpUM.name in srcUM:
-                    xSecretObj[CMAttributeType.USAGE_MASK.value]  = xSecretObj[CMAttributeType.USAGE_MASK.value] | tmpUM.value # OR the usage values
-
-
             # GKLM does not use alias for Secrets.  So we are copying the Name into the CM Alias.  
             # However, GKLM includes brakcets ("[]") in the string and they need to be removed 
             # before copying the true name value to CM
@@ -530,6 +518,9 @@ if listOnly == listOnlyOption.NEITHER.value:
             t_aliasList = [{CMAliasesAttribute.ALIAS.value:t_name, CMAliasesAttribute.TYPE.value:"string", CMAliasesAttribute.INDEX.value:0}]
             xSecretObj[CMAttributeType.ALIASES.value] = t_aliasList
 
+            # GKLM stores the Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
+            # The GKLM Usage Mask string must be replaced with the appropriate value before storing it in CM.
+            xSecretObj[CMAttributeType.USAGE_MASK.value]    = mapKeyUsage(srcSecretObjDataList[k][GKLMAttributeType.CRYPTOGRAPHIC_USAGE_MASK.value], keyUsageDict)
             xSecretObj[CMAttributeType.STATE.value]         = srcSecretObjDataList[k][GKLMAttributeType.SECRET_STATE.value].replace("_","-").title()
             xSecretObj[CMAttributeType.ALGORITHM.value]     = CMSecretAlgorithType.SECRET_SEED.value # CM seems to store them all as "SECRETESEED"
             xSecretObj[CMAttributeType.OBJECT_TYPE.value]   = CMSecretObjectType.SECRET_DATA.value # CM seems to store them all as "Secret Data"
@@ -537,7 +528,6 @@ if listOnly == listOnlyOption.NEITHER.value:
 
             # In GKLM, the Secret Object Type appears as "PASSWORD".  However, CM uses the term "Secret Data" for 
             # CM Object Type and "seed" for Data Type.  Let's copy the OBJECT TYPE string for now into CMs dataType.
-
             xSecretObj[CMSecretAttributeType.DATA_TYPE.value] = str(srcSecretObjDataList[k][GKLMAttributeType.TYPE.value]).lower()
 
             # Finally, copy the actual material and format

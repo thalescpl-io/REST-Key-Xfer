@@ -1051,3 +1051,20 @@ def checkForSrcCustomAttributes(t_srcKeyObjDataList):
                 t_srcNetAppAttributesArePresent = True
 
     return t_srcCustomAttributesIsPresent, t_srcNetAppAttributesArePresent
+
+def mapKeyUsage(t_srcKeyObjDataListUMStr, t_keyUsageDict):
+# ---------------------------------------------------------------------------------
+# GKLM stores the Key Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
+# The GKLM Key Usage Mask string must be replaced with the appropriate value before storing it in CM.
+# ---------------------------------------------------------------------------------
+
+    t_xKeyObjUMask    = CryptographicUsageMask.NULL.value  # Initialize
+    t_srcUMask        = t_srcKeyObjDataListUMStr
+    t_srcUMask        = t_srcUMask.strip()      # trim leading and trailing spaces from srcUM strin
+    t_srcUMList       = t_srcUMask.split(' ')   # break string into list
+
+    for t_srcUM in t_srcUMList:
+        if t_srcUM in t_keyUsageDict.keys():
+            t_xKeyObjUMask    = t_xKeyObjUMask  | t_keyUsageDict[t_srcUM]
+
+    return t_xKeyObjUMask 
