@@ -243,7 +243,6 @@ if listOnly != listOnlyOption.DESTINATION.value:
         
         # Now check for the presents of any objects for the client
         if len(t_objStr) > 0:
-
             # Now since the client has objects, check for the presence of any SYMMETRIC KEYS.  Note that the format of information
             # in the object string looks like "Symmetric Key (128) Secret Data (4)" where the number within the parenthasis is the quantity of 
             # symmetric keys or secret objects.
@@ -273,73 +272,41 @@ if listOnly != listOnlyOption.DESTINATION.value:
                 t_secretCount = int(t_secCntStr)
                 srcSecretListCnt = srcSecretListCnt + int(t_secretCount)
 
+            # Save Key And Secret Object Counts of latest client
+            srcClientKeyCount       = t_symKeyCount
+            srcClientSecretCount    = t_secretCount
+
         if listSrcClients:  # if user wants a list of available clients, provide it.
             tmpStr = "\n      %s contains %s Managed Objects %s Exportable Symmetric Keys %s Exportable Secrets" %(t_clientName, t_mgdObjCnt, t_symKeyCount, t_secretCount)
             print(tmpStr)
 
-
         # If a client name is specified, then check to ensure it is present.
         # If client name was specified, search for it and then capture key information 
         # specific to that client (presuming keys exist)
-        if len(srcClientName) > 0:
-            if srcClientName == t_clientName:
-                srcClientFound = True
+        t_srcClientNameLen = len(srcClientName)     # a non-zero length means the client name was specified
+        
+        if (t_srcClientNameLen == 0) or (t_srcClientNameLen > 0 and srcClientName == t_clientName):
+            srcClientFound = True
 
-                # Before attempting to get the key material, ensure that the srcUser has the permissions to obtain objects
-                if addClientUser and (srcUser not in clientList[client][GKLMAttributeType.CLIENT_USERS.value]):
-                    t_srcUserList.append(srcUser) # create list of user with the user associated with login
-                    t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
-                    clientUserAdded = True
-
-                # Save Key And Secret Object Counts
-                srcClientKeyCount       = t_symKeyCount
-                srcClientSecretCount    = t_secretCount
-
-                if int(t_symKeyCount) > 0:
-                    tmpStr = "       Retrieving symmetric key information for %s... " %(t_clientName)
-                    print(tmpStr)
-
-                    # -------------- Retrieve the Key Material --------------------------------------------------------------
-                    t_srcKeyObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SYMMETRIC_KEY.value, t_clientName)
-                    srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of key objects
-                    # -------------------------------------------------------------------------------------------------------
-
-                if includeSecrets and int(t_secretCount) > 0:
-                    tmpStr = "       Retrieving secret data information for %s... " %(t_clientName)
-                    print(tmpStr)
-
-                    # -------------- Retrieve the Secret Data Material --------------------------------------------------------------
-                    t_srcSecretObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SECRET_DATA.value, t_clientName)
-                    srcSecretObjDataList.extend(t_srcSecretObjDataList) # Add client-specific information to total list of secrete data objects
-                    # -------------------------------------------------------------------------------------------------------
-
-                # If a client user was added, remove it and restore the original ownership.
-                if clientUserAdded:
-                    t_success = removeSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
-                    t_originalClientUserList = clientList[client][GKLMAttributeType.CLIENT_USERS.value] # retrieve original list of users
-                    t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_originalClientUserList)
-
-        # Otherwise, just collect the key material and append it to the exhaustive list of ALL objects for ALL clients
-        else:
             # Before attempting to get the key material, ensure that the srcUser has the permissions to obtain objects
             if addClientUser and (srcUser not in clientList[client][GKLMAttributeType.CLIENT_USERS.value]):
                 t_srcUserList.append(srcUser) # create list of user with the user associated with login
                 t_success = assignSrcClientUsers(srcHost, srcPort, srcAuthStr, t_clientName, t_srcUserList)
                 clientUserAdded = True
 
+            # RETRIEVE KEYS
             if int(t_symKeyCount) > 0:
                 tmpStr = "       Retrieving symmetric key information for %s... " %(t_clientName)
                 print(tmpStr)
-
                 # -------------- Retrieve the Key Material --------------------------------------------------------------
                 t_srcKeyObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SYMMETRIC_KEY.value, t_clientName)
                 srcKeyObjDataList.extend(t_srcKeyObjDataList) # Add client-specific information to total list of key objects
                 # -------------------------------------------------------------------------------------------------------
 
+            # RETRIEVE SECRETS (if requested)
             if includeSecrets and int(t_secretCount) > 0:
                 tmpStr = "       Retrieving secret data information for %s... " %(t_clientName)
                 print(tmpStr)
-
                 # -------------- Retrieve the Secret Data Material --------------------------------------------------------------
                 t_srcSecretObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SECRET_DATA.value, t_clientName)
                 srcSecretObjDataList.extend(t_srcSecretObjDataList) # Add client-specific information to total list of secrete data objects
@@ -431,9 +398,7 @@ if listOnly == listOnlyOption.NEITHER.value:
     xKeyObjList = []
 
     # Create a dictionary of Key Usage (it will make it simpler to map)
-    keyUsageDict =  {}
-    for tmpUM in CryptographicUsageMask: 
-        keyUsageDict[tmpUM.name] = tmpUM.value
+    keyUsageDict =  createDictFromEnum(CryptographicUsageMask)
     
     # -------------- KEY OBJECT MAPPING ------------------------------------------------------------- 
     # For each KEY object in the source, map it with the proper dictionary keys to a x-formed list of 
