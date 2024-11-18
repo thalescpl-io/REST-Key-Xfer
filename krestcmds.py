@@ -1054,8 +1054,9 @@ def checkForSrcCustomAttributes(t_srcKeyObjDataList):
 
 def mapKeyUsage(t_srcKeyObjDataListUMStr, t_keyUsageDict):
 # ---------------------------------------------------------------------------------
-# GKLM stores the Key Usage Mask as a string.  CM stores it a the associated KMIP value.  As such,
-# The GKLM Key Usage Mask string must be replaced with the appropriate value before storing it in CM.
+# GKLM stores the Key Usage Mask as a string.  CM stores it a the associated KMIP 
+# value.  As such, the GKLM Key Usage Mask string must be replaced with the 
+# appropriate value before storing it in CM.
 # ---------------------------------------------------------------------------------
 
     t_xKeyObjUMask    = CryptographicUsageMask.NULL.value  # Initialize
@@ -1068,3 +1069,14 @@ def mapKeyUsage(t_srcKeyObjDataListUMStr, t_keyUsageDict):
             t_xKeyObjUMask    = t_xKeyObjUMask  | t_keyUsageDict[t_srcUM]
 
     return t_xKeyObjUMask 
+
+def createDictFromEnum(t_enum):
+# ----------------------------------------------------------------------------------
+# On occastion, an enumeration is more usable as a dictionary.  This small
+# routine creates a dictionary from an enumeration.
+# ----------------------------------------------------------------------------------
+    returnDict = {} # Create for returning later
+    for tmpEnum in t_enum: 
+        returnDict[tmpEnum.name] = tmpEnum.value
+
+    return returnDict
