@@ -19,3 +19,5 @@ python3 k-rest.py \
 -dstUserGroupName Group3 \
 -listSrcClients \
 -srcClientName Client1
+# -includeSecrets
+# -resolveSrcClientOwnership 
