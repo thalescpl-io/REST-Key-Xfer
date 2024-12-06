@@ -229,31 +229,27 @@ if listOnly != listOnlyOption.DESTINATION.value:
 
     # If user wants a list of available clients, provide it.
     if listSrcClients:  
-        tmpStr = "    Available Source Clients (%s): " %(listLen)
+        tmpStr = "    Available Source Clients (%s): \n" %(listLen)
         print(tmpStr)
 
     # Now for each client in the Source Server, extract the objects
     for client in range(listLen):
-        t_clientName = clientList[client][GKLMAttributeType.CLIENT_NAME.value]
-        t_symKeyCount = 0
-        t_secretCount = 0
+        t_clientName    = clientList[client][GKLMAttributeType.CLIENT_NAME.value]
+        t_symKeyCount   = 0
+        t_secretCount   = 0
 
-        t_mgdObjCnt = clientList[client][GKLMAttributeType.MANAGED_OBJECT_COUNT.value]
-        t_objStr = clientList[client][GKLMAttributeType.OBJECT.value]        
+        t_mgdObjCnt     = clientList[client][GKLMAttributeType.MANAGED_OBJECT_COUNT.value]
+        t_objStr        = clientList[client][GKLMAttributeType.OBJECT.value]        
         
         # Now check for the presents of any objects for the client
         if len(t_objStr) > 0:
-            # Now since the client has objects, check for the presence of any SYMMETRIC KEYS.  Note that the format of information
-            # in the object string looks like "Symmetric Key (128) Secret Data (4)" where the number within the parenthasis is the quantity of 
-            # symmetric keys or secret objects.
+            # Now since the client has objects, check for the presence of any SYMMETRIC KEYS or SECRET DATA.  
 
-            t_objStr = t_objStr.strip()                 # remove leading and trailing white space
-            t_objStr = t_objStr.replace(' (', ', (')    # Replace spaces before parenthasis with commas for easier parsing
-            t_objStr = t_objStr.replace(') ', '), ')    # Replace spaces before parenthasis with commas for easier parsing
-            t_objStr = t_objStr.replace(' (', '')       # Remove leading parenthasis
-            t_objStr = t_objStr.replace(')', '')        # Remove trailing parenthasis
+            # Convert object string "Symmetric Key (128) Secret Data (4)" to
+            # LIST of ['Symmetric Key', '128', 'Secret Data', '4']
+            t_objStrList = objStrToList(t_objStr)
 
-            t_objStrList = t_objStr.split(',') # create a list of the elements in the string.  Note elements are separated by a comma
+            # Now convert that LIST to a DICT
             t_objStrDict = listToDict(t_objStrList)
 
             # Process SYMMETRIC KEY objects
@@ -277,7 +273,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
             srcClientSecretCount    = t_secretCount
 
         if listSrcClients:  # if user wants a list of available clients, provide it.
-            tmpStr = "\n      %s contains %s Managed Objects %s Exportable Symmetric Keys %s Exportable Secrets" %(t_clientName, t_mgdObjCnt, t_symKeyCount, t_secretCount)
+            tmpStr = "      %s contains %s Managed Objects %s Exportable Symmetric Keys %s Exportable Secrets" %(t_clientName, t_mgdObjCnt, t_symKeyCount, t_secretCount)
             print(tmpStr)
 
         # If a client name is specified, then check to ensure it is present.
@@ -296,7 +292,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
 
             # RETRIEVE KEYS
             if int(t_symKeyCount) > 0:
-                tmpStr = "       Retrieving symmetric key information for %s... " %(t_clientName)
+                tmpStr = "       ...retrieving symmetric key information for %s... " %(t_clientName)
                 print(tmpStr)
                 # -------------- Retrieve the Key Material --------------------------------------------------------------
                 t_srcKeyObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SYMMETRIC_KEY.value, t_clientName)
@@ -305,7 +301,7 @@ if listOnly != listOnlyOption.DESTINATION.value:
 
             # RETRIEVE SECRETS (if requested)
             if includeSecrets and int(t_secretCount) > 0:
-                tmpStr = "       Retrieving secret data information for %s... " %(t_clientName)
+                tmpStr = "       ...retrieving secret data information for %s... " %(t_clientName)
                 print(tmpStr)
                 # -------------- Retrieve the Secret Data Material --------------------------------------------------------------
                 t_srcSecretObjDataList   = getSrcObjDataListByClient(srcHost, srcPort, srcAuthStr, srcUUID, GKLMAttributeType.SECRET_DATA.value, t_clientName)
@@ -424,7 +420,6 @@ if listOnly == listOnlyOption.NEITHER.value:
         
         xKeyObj[CMAttributeType.OBJECT_TYPE.value]  = tmpStr2.title()   # SYMMETRIC KEY -> Symmetric Key
         xKeyObj[CMAttributeType.MATERIAL.value]     = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_MATERIAL']
-        xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
         xKeyObj[CMAttributeType.FORMAT.value]       = srcKeyObjDataList[k][GKLMAttributeType.KEY_BLOCK.value]['KEY_FORMAT'].lower()
         
         # Add a userID to the associated key object so it can be made owner of the key

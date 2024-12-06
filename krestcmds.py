@@ -54,9 +54,9 @@ def listToDict(t_list):
 
     for i in range(0, len(t_list), 2):
         t_key = t_list[i]
-        t_key = t_key.strip()
+        t_key = t_key.strip()       # Remove any leading or trailing spaces
         t_value = t_list[i + 1]
-        t_value = t_value.strip()
+        t_value = t_value.strip()   # Remove any leading or trailing spaces
         t_dict[t_key] = t_value
 
     return t_dict
@@ -111,6 +111,26 @@ def bracketsToDict(t_stringWithBrackets):
         t_dict[t_subStrName]       = t_subStrValue
 
     return t_dict
+
+def objStrToList(t_objStr):
+# -------------------------------------------------------------------------------
+# # Note that the format of information # in the object string looks like 
+# "Symmetric Key (128) Secret Data (4)" where the number within the parenthasis 
+# is the quantity of # symmetric keys or secret objects.  Convert this
+# string to a list of ['Symmetric Key', '128', 'Secret Data', '4']
+# -------------------------------------------------------------------------------
+    t_str2      = t_objStr
+    t_str       = t_str2.strip()                 # remove leading and trailing white space
+    t_str2      = re.sub(r'[()]',',', t_str)     # remove left parenthasis
+    t_list       = t_str2.split(',')
+
+    t_len       = len(t_list)
+    if t_len % 2 == 1:                          # strip any straggling, odd elements in list
+        t_list = t_list[0:t_len-1]
+
+    t_objList = t_list
+
+    return(t_objList)
 
 def createSrcAuthStr(t_srcHost, t_srcPort, t_srcUser, t_srcPass):
 # -----------------------------------------------------------------------------
@@ -947,7 +967,7 @@ def addDataObjectToGroup(t_dstHost, t_dstPort, t_dstGrp, t_dstAuthStr, t_xKeyObj
     # group assignment)
     t_success = True
     if(r.status_code == STATUS_CODE_OK):
-        t_Response      = r.json()        
+        # t_Response      = r.json()        
         print("  ->Object Alias Data Cleared: ", t_alias)
         
         t_keyMetaData   = CMKeyNewMetaData(t_alias, t_dstGrp)
@@ -957,7 +977,7 @@ def addDataObjectToGroup(t_dstHost, t_dstPort, t_dstGrp, t_dstAuthStr, t_xKeyObj
 
         t_success = True
         if(r.status_code == STATUS_CODE_OK):
-            t_Response      = r.json()        
+            # t_Response      = r.json()        
             print("  ->Object Added to Group: ", t_alias)
         else:
             kPrintError("addDataObjectToGroup-full", r)        
