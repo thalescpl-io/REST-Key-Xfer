@@ -264,8 +264,7 @@ def getSrcKeyDataList(t_srcHost, t_srcPort, t_srcKeyList, t_srcAuthStr):
         # Note that REST Command does not require a body object in this GET REST Command
         r = requests.post(t_srcHostRESTCmd, headers=t_srcHeaders, verify=False)
         if(r.status_code != STATUS_CODE_OK):
-            print(r)
-            # kPrintError("getSrcKeyDataList", r)
+            kPrintError("getSrcKeyDataList", r)
             exit()
 
         t_data          = r.json()

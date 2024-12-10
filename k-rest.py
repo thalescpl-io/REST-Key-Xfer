@@ -18,6 +18,8 @@ from    kerrors import *
 from    krestcmds import *
 from    krestenums import *
 from    netappfilters import *
+from    termcolor import colored, cprint
+import  colorama
 
 # ---------------- Constants ----------------------------------------------------
 DEFAULT_SRC_PORT    = ["9443"]
@@ -92,7 +94,8 @@ includeSecrets = False   #set default to be false
 # Args are returned as a LIST.  Separate them into individual strings
 args = parser.parse_args()
 
-
+# Initialize Terminal Color
+colorama.init()
 
 # Display results from inputs
 print("\n ---- SRC & DST PARAMETERS ----")
@@ -344,16 +347,17 @@ if listOnly != listOnlyOption.DESTINATION.value:
     srcSecretObjCnt     = len(srcSecretObjDataList) # Secret Objects
 
     if listOnly != listOnlyOption.DESTINATION.value:
-        print("\n Number of Src List Keys: ", srcKeyListCnt)
-        print(" Number of filtered and exportable Src Key Objects: ", srcKeyObjCnt)
+        tmpstr = "\n Number of Src List Keys: %s\n Number of filtered and exportable Src Key Objects: %s" %(srcKeyListCnt, srcKeyObjCnt)
+        print(colored(tmpstr, "light_yellow", attrs=["bold"]))
         printSrcKeyObjDataList(srcKeyObjDataList)
 
         if includeSecrets:
-            print("\n Number of Src List Secrets: ", srcSecretListCnt)
-            print(" Number of filtered and exportable Src Secret Objects: ", srcSecretObjCnt)
+            tmpstr = "\n Number of Src List Secrets: %s\n Number of filtered and exportable Src Secret Objects: %s" %(srcSecretListCnt, srcSecretObjCnt)
+            print(colored(tmpstr, "light_yellow", attrs=["bold"]))
             printSrcSecretObjDataList(srcSecretObjDataList)
 
-        print("\n --- SRC OBJECT RETRIEVAL COMPLETE --- \n")
+        tmpstr = "\n --- SRC OBJECT RETRIEVAL COMPLETE --- \n"
+        print(colored(tmpstr, "light_green", attrs=["bold"]))
 
 
 # ################################################################################
@@ -583,7 +587,9 @@ if listOnly != listOnlyOption.SOURCE.value:
 
     print("\nRetrieving list of objects from destination...")
     dstObjList      = getDstObjList(dstHost, dstPort, dstAuthStr)
-    print("\nDst Object List Count: ", len(dstObjList))
+    dstObjListCnt   = len(dstObjList)
+    tmpstr = "\n Dst Object List Count: %s" %(dstObjListCnt)
+    print(colored(tmpstr, "light_yellow", attrs=["bold"]))
 
     # Now that name information has been collected, export the data for each key
     # THIS INCLUDES the META Data and the Key Material
@@ -595,11 +601,18 @@ if listOnly != listOnlyOption.SOURCE.value:
         dstObjList = t_FilteredList   # replace key obj data list with filtered list
         
     dstExpObjCnt    = len(dstObjList)
-    print("Dst Exportable Data Object Count: ", dstExpObjCnt)
+    tmpstr = " Dst Exportable Data Object Count: %s" %(dstExpObjCnt)
+    print(colored(tmpstr, "light_yellow", attrs=["bold"]))
+
     # printDstObjDataAndOwner(dstObjData, dstUsrsAllDict)
     printDstObjDataAndOwner(dstObjList, dstUsrsAllDict)
     
-    print("\n --- DST OBJECT RETRIEVAL COMPLETE --- \n")
+    tmpstr = "\n --- DST OBJECT RETRIEVAL COMPLETE --- \n"
+    print(colored(tmpstr, "light_green", attrs=["bold"]))
+
+
+
+    
     
 
 #####################################################################################
